@@ -3,7 +3,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 import 'package:intl/intl.dart';
+import 'package:sqflite/sqflite.dart';
 import 'package:campuswork/model/project.dart';
+import 'package:campuswork/services/data_sync_service.dart';
+import 'package:campuswork/database/database_helper.dart';
+import 'package:campuswork/auth/auth_service.dart';
+import 'package:campuswork/model/user.dart';
 
 class ProjectService {
   static final ProjectService _instance = ProjectService._internal();
@@ -12,6 +17,8 @@ class ProjectService {
 
   static const _projectsKey = 'projects';
   List<Project> _projects = [];
+  final DataSyncService _syncService = DataSyncService();
+  final DatabaseHelper _dbHelper = DatabaseHelper.instance;
 
   Future<void> init() async {
     await _loadProjects();
@@ -22,24 +29,99 @@ class ProjectService {
 
   Future<void> _loadProjects() async {
     try {
+      // Charger d'abord depuis la base de données
+      final db = await _dbHelper.database;
+      final List<Map<String, dynamic>> projectMaps = await db.query('projects');
+      
+      if (projectMaps.isNotEmpty) {
+        _projects = projectMaps.map((map) => Project.fromDatabase(map)).toList();
+        debugPrint('✅ Loaded ${_projects.length} projects from database');
+        
+        // Synchroniser avec les données globales pour compatibilité
+        await _syncService.saveGlobalData('projects', _projects.map((p) => p.toJson()).toList());
+        return;
+      }
+
+      // Fallback: charger depuis les données globales et migrer vers la DB
+      final globalData = await _syncService.getGlobalData('projects');
+      if (globalData.isNotEmpty) {
+        _projects = globalData.map((json) => Project.fromJson(json)).toList();
+        
+        // Migrer vers la base de données
+        for (final project in _projects) {
+          await _saveProjectToDatabase(project);
+        }
+        
+        debugPrint('✅ Migrated ${_projects.length} projects from global data to database');
+        return;
+      }
+
+      // Fallback final: charger depuis SharedPreferences et migrer
       final prefs = await SharedPreferences.getInstance();
       final projectsData = prefs.getString(_projectsKey);
       if (projectsData != null) {
         final List<dynamic> projectsList = jsonDecode(projectsData);
         _projects = projectsList.map((json) => Project.fromJson(json)).toList();
+        
+        // Migrer vers la base de données
+        for (final project in _projects) {
+          await _saveProjectToDatabase(project);
+        }
+        
+        debugPrint('✅ Migrated ${_projects.length} projects from SharedPreferences to database');
       }
     } catch (e) {
-      debugPrint('Failed to load projects: $e');
+      debugPrint('❌ Failed to load projects: $e');
       _projects = [];
     }
   }
 
   Future<void> _saveProjects() async {
     try {
+      // Sauvegarder dans la base de données
+      for (final project in _projects) {
+        await _saveProjectToDatabase(project);
+      }
+      
+      // Aussi sauvegarder dans les données globales pour la compatibilité
+      await _syncService.saveGlobalData('projects', _projects.map((p) => p.toJson()).toList());
+      
+      // Aussi sauvegarder localement pour la compatibilité
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_projectsKey, jsonEncode(_projects.map((p) => p.toJson()).toList()));
+      
+      debugPrint('✅ Saved ${_projects.length} projects to database, global and local storage');
     } catch (e) {
-      debugPrint('Failed to save projects: $e');
+      debugPrint('❌ Failed to save projects: $e');
+    }
+  }
+
+  Future<void> _saveProjectToDatabase(Project project) async {
+    try {
+      final db = await _dbHelper.database;
+      final projectData = project.toDatabase();
+      
+      // Utiliser INSERT OR REPLACE pour gérer les mises à jour
+      await db.insert(
+        'projects',
+        projectData,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    } catch (e) {
+      debugPrint('❌ Failed to save project to database: $e');
+      rethrow;
+    }
+  }
+
+  /// Recharger les projets depuis la base de données
+  Future<void> refreshProjects() async {
+    try {
+      final db = await _dbHelper.database;
+      final List<Map<String, dynamic>> projectMaps = await db.query('projects');
+      _projects = projectMaps.map((map) => Project.fromDatabase(map)).toList();
+      debugPrint('🔄 Refreshed ${_projects.length} projects from database');
+    } catch (e) {
+      debugPrint('❌ Failed to refresh projects: $e');
     }
   }
 
@@ -115,6 +197,50 @@ class ProjectService {
 
   List<Project> getAllProjects() => List.unmodifiable(_projects);
 
+  /// Obtenir tous les projets avec filtrage basé sur le rôle
+  List<Project> getAllProjectsWithRoleFilter() {
+    final currentUser = AuthService().currentUser;
+    if (currentUser == null) return [];
+
+    switch (currentUser.userRole) {
+      case UserRole.admin:
+        // Les admins peuvent voir tous les projets
+        return List.unmodifiable(_projects);
+      
+      case UserRole.lecturer:
+        // Les professeurs peuvent voir tous les projets publics et privés
+        return List.unmodifiable(_projects);
+      
+      case UserRole.student:
+        // Les étudiants ne voient que les projets publics et leurs propres projets
+        return _projects.where((project) => 
+          project.status == ProjectStatus.public || 
+          project.userId == currentUser.userId ||
+          project.collaborators.contains(currentUser.userId)
+        ).toList();
+      
+      default:
+        return [];
+    }
+  }
+
+  /// Obtenir les projets publics seulement
+  List<Project> getPublicProjects() => 
+      _projects.where((p) => p.status == ProjectStatus.public).toList();
+
+  /// Obtenir tous les projets pour les admins et professeurs
+  List<Project> getAllProjectsForAdminAndLecturers() {
+    final currentUser = AuthService().currentUser;
+    if (currentUser == null) return [];
+
+    if (currentUser.userRole == UserRole.admin || currentUser.userRole == UserRole.lecturer) {
+      return List.unmodifiable(_projects);
+    }
+    
+    // Pour les autres rôles, retourner seulement les projets publics
+    return getPublicProjects();
+  }
+
   List<Project> getProjectsByStudent(String studentId) =>
       _projects.where((p) => p.userId == studentId || p.collaborators.contains(studentId)).toList();
 
@@ -158,10 +284,19 @@ class ProjectService {
       debugPrint('   - User ID: ${project.userId}');
       debugPrint('   - Course: ${project.courseName}');
       
-      _projects.add(project);
-      await _saveProjects();
+      // Recharger les données les plus récentes avant d'ajouter
+      await refreshProjects();
       
-      debugPrint('✅ Project created successfully');
+      // Sauvegarder directement dans la base de données
+      await _saveProjectToDatabase(project);
+      
+      // Ajouter à la liste en mémoire
+      _projects.add(project);
+      
+      // Synchroniser avec les autres systèmes
+      await _syncService.saveGlobalData('projects', _projects.map((p) => p.toJson()).toList());
+      
+      debugPrint('✅ Project created successfully in database');
       debugPrint('   - Total projects now: ${_projects.length}');
       
       return true;
@@ -174,29 +309,83 @@ class ProjectService {
 
   Future<bool> updateProject(Project project) async {
     try {
+      await refreshProjects();
+      
       final index = _projects.indexWhere((p) => p.projectId == project.projectId);
       if (index == -1) return false;
 
+      // Mettre à jour dans la base de données
+      await _saveProjectToDatabase(project);
+      
+      // Mettre à jour en mémoire
       _projects[index] = project;
-      await _saveProjects();
+      
+      // Synchroniser avec les autres systèmes
+      await _syncService.saveGlobalData('projects', _projects.map((p) => p.toJson()).toList());
+      
+      debugPrint('✅ Updated project in database: ${project.projectName}');
       return true;
     } catch (e) {
-      debugPrint('Failed to update project: $e');
+      debugPrint('❌ Failed to update project: $e');
       return false;
     }
   }
 
   Future<bool> deleteProject(String projectId) async {
     try {
+      await refreshProjects();
+      
+      final project = _projects.firstWhere((p) => p.projectId == projectId, orElse: () => Project(
+        projectName: 'Unknown',
+        courseName: '',
+        description: '',
+        userId: '',
+      ));
+      
+      // Supprimer de la base de données
+      final db = await _dbHelper.database;
+      await db.delete('projects', where: 'projectId = ?', whereArgs: [projectId]);
+      
+      // Supprimer de la mémoire
       _projects.removeWhere((p) => p.projectId == projectId);
-      await _saveProjects();
+      
+      // Synchroniser avec les autres systèmes
+      await _syncService.saveGlobalData('projects', _projects.map((p) => p.toJson()).toList());
+      
+      debugPrint('✅ Deleted project from database: ${project.projectName}');
       return true;
     } catch (e) {
-      debugPrint('Failed to delete project: $e');
+      debugPrint('❌ Failed to delete project: $e');
       return false;
     }
   }
 
+  // Méthodes asynchrones avec synchronisation
+  Future<List<Project>> getAllProjectsAsync() async {
+    await refreshProjects();
+    return List.unmodifiable(_projects);
+  }
+
+  Future<List<Project>> getProjectsByUserAsync(String userId) async {
+    await refreshProjects();
+    return _projects.where((p) => p.userId == userId).toList();
+  }
+
+  Future<List<Project>> getProjectsByCourseAsync(String courseName) async {
+    await refreshProjects();
+    return _projects.where((p) => p.courseName.toLowerCase().contains(courseName.toLowerCase())).toList();
+  }
+
+  Future<Project?> getProjectByIdAsync(String projectId) async {
+    await refreshProjects();
+    try {
+      return _projects.firstWhere((p) => p.projectId == projectId);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Méthodes synchrones (pour compatibilité)
   Project? getProjectById(String projectId) {
     try {
       return _projects.firstWhere((p) => p.projectId == projectId);

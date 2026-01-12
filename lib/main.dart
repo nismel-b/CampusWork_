@@ -1,18 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
+import 'package:provider/provider.dart';
 import 'navigation/app_route.dart';
-import 'theme/theme.dart';
+import 'theme/theme.dart' as app_theme;
 import 'auth/auth_service.dart';
 import 'services/project_service.dart';
 import 'services/comment_service.dart';
 import 'services/interaction_service.dart';
 import 'services/notification_services.dart';
 import 'services/post_service.dart';
+import 'services/data_sync_service.dart';
+import 'services/profile_settings_service.dart';
+import 'providers/theme_provider.dart';
 
 void main() {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
-  runApp(const CampusWorkApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => ThemeProvider(),
+      child: const CampusWorkApp(),
+    ),
+  );
 }
 
 class CampusWorkApp extends StatefulWidget {
@@ -40,6 +49,16 @@ class _MyAppState extends State<CampusWorkApp> {
       await InteractionService().init();
       await NotificationService().init();
       await PostService().init();
+      await ProfileSettingsService().init();
+
+      // Initialiser le provider de thème
+      if (mounted) {
+        await Provider.of<ThemeProvider>(context, listen: false).init();
+      }
+
+      // Initialiser le service de synchronisation des données
+      final dataSyncService = DataSyncService();
+      await dataSyncService.forceSyncAll();
 
       if (mounted) {
         setState(() => _isInitialized = true);
@@ -62,7 +81,7 @@ class _MyAppState extends State<CampusWorkApp> {
     if (!_isInitialized) {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
+        theme: app_theme.AppTheme.lightTheme,
         home: const Scaffold(
           body: Center(
             child: Column(
@@ -81,7 +100,7 @@ class _MyAppState extends State<CampusWorkApp> {
     if (_errorMessage != null) {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
+        theme: app_theme.AppTheme.lightTheme,
         home: Scaffold(
           body: Center(
             child: Padding(
@@ -116,12 +135,17 @@ class _MyAppState extends State<CampusWorkApp> {
       );
     }
 
-    return MaterialApp.router(
-      title: 'Projet Académique',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      routerConfig: router,
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        return MaterialApp.router(
+          title: 'Projet Académique',
+          debugShowCheckedModeBanner: false,
+          theme: app_theme.AppTheme.lightTheme,
+          darkTheme: app_theme.AppTheme.darkTheme,
+          themeMode: themeProvider.themeMode,
+          routerConfig: router,
+        );
+      },
     );
   }
 }

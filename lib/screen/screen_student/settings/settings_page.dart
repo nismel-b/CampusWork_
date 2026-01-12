@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import 'package:campuswork/auth/auth_service.dart';
+import 'package:campuswork/services/profile_settings_service.dart';
+import 'package:campuswork/providers/theme_provider.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -10,123 +13,245 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  bool _notificationsEnabled = true;
-  bool _emailNotifications = true;
-  bool _darkMode = false;
-  String _language = 'Français';
+  final ProfileSettingsService _settingsService = ProfileSettingsService();
+  late ProfileSettings _settings;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    setState(() => _isLoading = true);
+    try {
+      _settings = _settingsService.getCurrentSettings();
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Paramètres'),
-      ),
-      body: ListView(
-        children: [
-          // Section Notifications
-          _buildSectionHeader('Notifications'),
-          SwitchListTile(
-            title: const Text('Notifications push'),
-            subtitle: const Text('Recevoir des notifications sur l\'appareil'),
-            value: _notificationsEnabled,
-            onChanged: (value) {
-              setState(() => _notificationsEnabled = value);
-            },
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Paramètres')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Paramètres'),
           ),
-          SwitchListTile(
-            title: const Text('Notifications par email'),
-            subtitle: const Text('Recevoir des notifications par email'),
-            value: _emailNotifications,
-            onChanged: (value) {
-              setState(() => _emailNotifications = value);
-            },
-          ),
-          
-          const Divider(),
-          
-          // Section Apparence
-          _buildSectionHeader('Apparence'),
-          SwitchListTile(
-            title: const Text('Mode sombre'),
-            subtitle: const Text('Utiliser le thème sombre'),
-            value: _darkMode,
-            onChanged: (value) {
-              setState(() => _darkMode = value);
-              // TODO: Implémenter le changement de thème
-            },
-          ),
-          ListTile(
-            title: const Text('Langue'),
-            subtitle: Text(_language),
-            trailing: const Icon(Icons.arrow_forward_ios),
-            onTap: () {
-              _showLanguageDialog();
-            },
-          ),
-          
-          const Divider(),
-          
-          // Section Compte
-          _buildSectionHeader('Compte'),
-          ListTile(
-            title: const Text('Changer le mot de passe'),
-            leading: const Icon(Icons.lock),
-            trailing: const Icon(Icons.arrow_forward_ios),
-            onTap: () {
-              _showChangePasswordDialog();
-            },
-          ),
-          ListTile(
-            title: const Text('Supprimer le compte'),
-            leading: const Icon(Icons.delete, color: Colors.red),
-            trailing: const Icon(Icons.arrow_forward_ios),
-            onTap: () {
-              _showDeleteAccountDialog();
-            },
-          ),
-          
-          const Divider(),
-          
-          // Section À propos
-          _buildSectionHeader('À propos'),
-          ListTile(
-            title: const Text('Version de l\'application'),
-            subtitle: const Text('1.0.0'),
-            leading: const Icon(Icons.info),
-          ),
-          ListTile(
-            title: const Text('Conditions d\'utilisation'),
-            leading: const Icon(Icons.description),
-            trailing: const Icon(Icons.arrow_forward_ios),
-            onTap: () {
-              // TODO: Ouvrir les conditions d'utilisation
-            },
-          ),
-          ListTile(
-            title: const Text('Politique de confidentialité'),
-            leading: const Icon(Icons.privacy_tip),
-            trailing: const Icon(Icons.arrow_forward_ios),
-            onTap: () {
-              // TODO: Ouvrir la politique de confidentialité
-            },
-          ),
-          
-          const SizedBox(height: 32),
-          
-          // Bouton de déconnexion
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: ElevatedButton(
-              onPressed: _logout,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
+          body: ListView(
+            children: [
+              // Section Notifications
+              _buildSectionHeader('Notifications'),
+              SwitchListTile(
+                title: const Text('Notifications push'),
+                subtitle: const Text('Recevoir des notifications sur l\'appareil'),
+                value: _settings.notificationsEnabled,
+                onChanged: (value) async {
+                  final success = await _settingsService.updateNotificationSettings(
+                    notificationsEnabled: value,
+                  );
+                  if (success) {
+                    await _loadSettings();
+                  }
+                },
               ),
-              child: const Text('Se déconnecter'),
-            ),
+              SwitchListTile(
+                title: const Text('Notifications par email'),
+                subtitle: const Text('Recevoir des notifications par email'),
+                value: _settings.emailNotifications,
+                onChanged: (value) async {
+                  final success = await _settingsService.updateNotificationSettings(
+                    emailNotifications: value,
+                  );
+                  if (success) {
+                    await _loadSettings();
+                  }
+                },
+              ),
+              
+              const Divider(),
+              
+              // Section Apparence
+              _buildSectionHeader('Apparence'),
+              ListTile(
+                title: const Text('Thème'),
+                subtitle: Text(themeProvider.getThemeDisplayName(themeProvider.themeMode)),
+                leading: const Icon(Icons.palette),
+                trailing: const Icon(Icons.arrow_forward_ios),
+                onTap: () => _showThemeDialog(themeProvider),
+              ),
+              ListTile(
+                title: const Text('Langue'),
+                subtitle: Text(themeProvider.getLanguageDisplayName(_settings.language)),
+                leading: const Icon(Icons.language),
+                trailing: const Icon(Icons.arrow_forward_ios),
+                onTap: () => _showLanguageDialog(themeProvider),
+              ),
+              
+              const Divider(),
+              
+              // Section Notifications avancées
+              _buildSectionHeader('Notifications avancées'),
+              SwitchListTile(
+                title: const Text('Mises à jour de projets'),
+                subtitle: const Text('Notifications pour les changements de projets'),
+                value: _settings.projectUpdates,
+                onChanged: (value) async {
+                  final success = await _settingsService.updateNotificationSettings(
+                    projectUpdates: value,
+                  );
+                  if (success) {
+                    await _loadSettings();
+                  }
+                },
+              ),
+              SwitchListTile(
+                title: const Text('Invitations de groupe'),
+                subtitle: const Text('Notifications pour les invitations'),
+                value: _settings.groupInvitations,
+                onChanged: (value) async {
+                  final success = await _settingsService.updateNotificationSettings(
+                    groupInvitations: value,
+                  );
+                  if (success) {
+                    await _loadSettings();
+                  }
+                },
+              ),
+              SwitchListTile(
+                title: const Text('Réponses aux commentaires'),
+                subtitle: const Text('Notifications pour les réponses'),
+                value: _settings.commentReplies,
+                onChanged: (value) async {
+                  final success = await _settingsService.updateNotificationSettings(
+                    commentReplies: value,
+                  );
+                  if (success) {
+                    await _loadSettings();
+                  }
+                },
+              ),
+              
+              const Divider(),
+              
+              // Section Confidentialité
+              _buildSectionHeader('Confidentialité'),
+              SwitchListTile(
+                title: const Text('Mode privé'),
+                subtitle: const Text('Masquer votre profil aux autres utilisateurs'),
+                value: _settings.privacyMode,
+                onChanged: (value) async {
+                  final success = await _settingsService.updatePrivacySettings(
+                    privacyMode: value,
+                  );
+                  if (success) {
+                    await _loadSettings();
+                  }
+                },
+              ),
+              SwitchListTile(
+                title: const Text('Afficher l\'email'),
+                subtitle: const Text('Permettre aux autres de voir votre email'),
+                value: _settings.showEmail,
+                onChanged: (value) async {
+                  final success = await _settingsService.updatePrivacySettings(
+                    showEmail: value,
+                  );
+                  if (success) {
+                    await _loadSettings();
+                  }
+                },
+              ),
+              SwitchListTile(
+                title: const Text('Autoriser la collaboration'),
+                subtitle: const Text('Permettre aux autres de vous inviter'),
+                value: _settings.allowCollaboration,
+                onChanged: (value) async {
+                  final success = await _settingsService.updatePrivacySettings(
+                    allowCollaboration: value,
+                  );
+                  if (success) {
+                    await _loadSettings();
+                  }
+                },
+              ),
+              
+              const Divider(),
+              
+              // Section Compte
+              _buildSectionHeader('Compte'),
+              ListTile(
+                title: const Text('Changer le mot de passe'),
+                leading: const Icon(Icons.lock),
+                trailing: const Icon(Icons.arrow_forward_ios),
+                onTap: () {
+                  _showChangePasswordDialog();
+                },
+              ),
+              ListTile(
+                title: const Text('Supprimer le compte'),
+                leading: const Icon(Icons.delete, color: Colors.red),
+                trailing: const Icon(Icons.arrow_forward_ios),
+                onTap: () {
+                  _showDeleteAccountDialog();
+                },
+              ),
+              
+              const Divider(),
+              
+              // Section À propos
+              _buildSectionHeader('À propos'),
+              ListTile(
+                title: const Text('Version de l\'application'),
+                subtitle: const Text('1.0.0'),
+                leading: const Icon(Icons.info),
+              ),
+              ListTile(
+                title: const Text('Conditions d\'utilisation'),
+                leading: const Icon(Icons.description),
+                trailing: const Icon(Icons.arrow_forward_ios),
+                onTap: () {
+                  // TODO: Ouvrir les conditions d'utilisation
+                },
+              ),
+              ListTile(
+                title: const Text('Politique de confidentialité'),
+                leading: const Icon(Icons.privacy_tip),
+                trailing: const Icon(Icons.arrow_forward_ios),
+                onTap: () {
+                  // TODO: Ouvrir la politique de confidentialité
+                },
+              ),
+              
+              const SizedBox(height: 32),
+              
+              // Bouton de déconnexion
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: ElevatedButton(
+                  onPressed: _logout,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Se déconnecter'),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -143,7 +268,60 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  void _showLanguageDialog() {
+  void _showThemeDialog(ThemeProvider themeProvider) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Choisir le thème'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            RadioListTile<ThemeMode>(
+              title: const Text('Clair'),
+              subtitle: const Text('Thème clair'),
+              value: ThemeMode.light,
+              groupValue: themeProvider.themeMode,
+              onChanged: (value) async {
+                if (value != null) {
+                  await themeProvider.setThemeMode(value);
+                  await _loadSettings();
+                  if (mounted) Navigator.pop(context);
+                }
+              },
+            ),
+            RadioListTile<ThemeMode>(
+              title: const Text('Sombre'),
+              subtitle: const Text('Thème sombre'),
+              value: ThemeMode.dark,
+              groupValue: themeProvider.themeMode,
+              onChanged: (value) async {
+                if (value != null) {
+                  await themeProvider.setThemeMode(value);
+                  await _loadSettings();
+                  if (mounted) Navigator.pop(context);
+                }
+              },
+            ),
+            RadioListTile<ThemeMode>(
+              title: const Text('Système'),
+              subtitle: const Text('Suivre les paramètres du système'),
+              value: ThemeMode.system,
+              groupValue: themeProvider.themeMode,
+              onChanged: (value) async {
+                if (value != null) {
+                  await themeProvider.setThemeMode(value);
+                  await _loadSettings();
+                  if (mounted) Navigator.pop(context);
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showLanguageDialog(ThemeProvider themeProvider) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -151,22 +329,28 @@ class _SettingsPageState extends State<SettingsPage> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            RadioListTile<String>(
+            RadioListTile<AppLanguage>(
               title: const Text('Français'),
-              value: 'Français',
-              groupValue: _language,
-              onChanged: (value) {
-                setState(() => _language = value!);
-                Navigator.pop(context);
+              value: AppLanguage.french,
+              groupValue: _settings.language,
+              onChanged: (value) async {
+                if (value != null) {
+                  await themeProvider.setLanguage(value);
+                  await _loadSettings();
+                  if (mounted) Navigator.pop(context);
+                }
               },
             ),
-            RadioListTile<String>(
+            RadioListTile<AppLanguage>(
               title: const Text('English'),
-              value: 'English',
-              groupValue: _language,
-              onChanged: (value) {
-                setState(() => _language = value!);
-                Navigator.pop(context);
+              value: AppLanguage.english,
+              groupValue: _settings.language,
+              onChanged: (value) async {
+                if (value != null) {
+                  await themeProvider.setLanguage(value);
+                  await _loadSettings();
+                  if (mounted) Navigator.pop(context);
+                }
               },
             ),
           ],

@@ -4,6 +4,8 @@ import 'package:campuswork/auth/auth_service.dart';
 import 'package:campuswork/auth/oauth_service.dart';
 import 'package:campuswork/model/user.dart';
 import 'package:campuswork/theme/theme.dart';
+import 'package:campuswork/widgets/app_logo.dart';
+import 'package:campuswork/services/tutorial_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -108,17 +110,24 @@ class _LoginPageState extends State<LoginPage>
     }
   }
 
-  void _navigateBasedOnRole(UserRole role) {
-    switch (role) {
-      case UserRole.student:
-        context.go('/student-dashboard');
-        break;
-      case UserRole.lecturer:
-        context.go('/lecturer-dashboard');
-        break;
-      case UserRole.admin:
-        context.go('/admin-dashboard');
-        break;
+  void _navigateBasedOnRole(UserRole role) async {
+    // Vérifier si l'utilisateur doit voir le tutoriel
+    final shouldShowTutorial = await TutorialService.shouldShowTutorial(role);
+    
+    if (shouldShowTutorial) {
+      context.go('/tutorial/${role.name}');
+    } else {
+      switch (role) {
+        case UserRole.student:
+          context.go('/student-dashboard');
+          break;
+        case UserRole.lecturer:
+          context.go('/lecturer-dashboard');
+          break;
+        case UserRole.admin:
+          context.go('/admin-dashboard');
+          break;
+      }
     }
   }
 
@@ -218,33 +227,14 @@ class _LoginPageState extends State<LoginPage>
   Widget _buildHeader() {
     return Column(
       children: [
-        // 3D Logo
-        Container(
-          width: 80,
-          height: 80,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Colors.white, Color(0xFFF0F4F8)],
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.2),
-                blurRadius: 15,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: const Icon(
-            Icons.school,
-            size: 40,
-            color: Color(0xFF4A90E2),
-          ),
+        // Logo personnalisé avec animation
+        HeroAppLogo(
+          heroTag: 'login_logo',
+          size: 120,
+          showText: false,
         ),
         
-        const SizedBox(height: 24),
+        const SizedBox(height: 32),
         
         Text(
           'Bienvenue sur',
@@ -260,19 +250,38 @@ class _LoginPageState extends State<LoginPage>
           'CampusWork',
           style: Theme.of(context).textTheme.displaySmall?.copyWith(
             color: Colors.white,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -1,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -1.5,
+            shadows: [
+              Shadow(
+                color: Colors.black.withOpacity(0.3),
+                offset: const Offset(0, 4),
+                blurRadius: 8,
+              ),
+            ],
           ),
         ),
         
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         
-        Text(
-          'Connectez-vous pour accéder à vos projets',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: Colors.white.withOpacity(0.8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(25),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.3),
+              width: 1,
+            ),
           ),
-          textAlign: TextAlign.center,
+          child: Text(
+            'Connectez-vous pour accéder à vos projets',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Colors.white.withOpacity(0.9),
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+          ),
         ),
       ],
     );
@@ -284,17 +293,22 @@ class _LoginPageState extends State<LoginPage>
       constraints: const BoxConstraints(maxWidth: 400),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            color: Colors.black.withOpacity(0.15),
+            blurRadius: 25,
+            offset: const Offset(0, 15),
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(36),
         child: Form(
           key: _formKey,
           child: Column(
@@ -303,13 +317,24 @@ class _LoginPageState extends State<LoginPage>
               Text(
                 'Connexion',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w800,
                   color: const Color(0xFF1A1D29),
+                  letterSpacing: -0.5,
                 ),
                 textAlign: TextAlign.center,
               ),
               
-              const SizedBox(height: 32),
+              const SizedBox(height: 8),
+              
+              Text(
+                'Accédez à votre espace personnel',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: const Color(0xFF6B7280),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              
+              const SizedBox(height: 36),
               
               // Username Field
               _buildTextField(
@@ -324,7 +349,7 @@ class _LoginPageState extends State<LoginPage>
                 },
               ),
               
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
               
               // Password Field
               _buildTextField(
@@ -349,7 +374,7 @@ class _LoginPageState extends State<LoginPage>
                 },
               ),
               
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               
               // Forgot Password
               Align(
@@ -363,37 +388,38 @@ class _LoginPageState extends State<LoginPage>
                     'Mot de passe oublié ?',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: const Color(0xFF4A90E2),
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
               ),
               
-              const SizedBox(height: 24),
+              const SizedBox(height: 28),
               
               // Login Button
               _buildLoginButton(),
               
-              const SizedBox(height: 24),
+              const SizedBox(height: 28),
               
               // Divider
               Row(
                 children: [
-                  const Expanded(child: Divider()),
+                  Expanded(child: Divider(color: Colors.grey[300])),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Text(
                       'ou',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: const Color(0xFF6B7280),
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
-                  const Expanded(child: Divider()),
+                  Expanded(child: Divider(color: Colors.grey[300])),
                 ],
               ),
               
-              const SizedBox(height: 24),
+              const SizedBox(height: 28),
               
               // Social Login Buttons
               _buildSocialButtons(),
@@ -456,9 +482,9 @@ class _LoginPageState extends State<LoginPage>
           backgroundColor: const Color(0xFF4A90E2),
           foregroundColor: Colors.white,
           elevation: 0,
-          shadowColor: const Color(0xFF4A90E2).withOpacity(0.3),
+          shadowColor: const Color(0xFF4A90E2).withOpacity(0.4),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
           ),
         ),
         child: _isLoading
@@ -466,16 +492,23 @@ class _LoginPageState extends State<LoginPage>
                 width: 24,
                 height: 24,
                 child: CircularProgressIndicator(
-                  strokeWidth: 2,
+                  strokeWidth: 2.5,
                   valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                 ),
               )
-            : Text(
-                'Se connecter',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.login, size: 20),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Se connecter',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
               ),
       ),
     );

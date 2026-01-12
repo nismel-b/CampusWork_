@@ -10,7 +10,7 @@ import 'package:campuswork/screen/screen_student/profile/student_profile_page.da
 import 'package:campuswork/screen/screen_student/team/team_page.dart';
 import 'package:campuswork/screen/screen_student/courses/courses_page.dart';
 import 'package:campuswork/screen/screen_lecturer/dashboard/dashboard.dart';
-import 'package:campuswork/screen/screen_admin/dashboard/admin_dashboard.dart';
+import 'package:campuswork/screen/screen_admin/dashboard/dashboard.dart';
 import 'package:campuswork/screen/profile/profile_settings.dart';
 import 'package:campuswork/screen/surveys/create_survey_page.dart';
 import 'package:campuswork/screen/collaboration/collaboration_requests_page.dart';
@@ -19,8 +19,13 @@ import 'package:campuswork/screen/common_screen/feed_page.dart';
 import 'package:campuswork/screen/common_screen/create_post_page.dart';
 import 'package:campuswork/splash_screen/splash_screen.dart';
 import 'package:campuswork/onboarding_screen.dart';
+import 'package:campuswork/screen/tutorial/tutorial_screen.dart';
+import 'package:campuswork/services/tutorial_service.dart';
 import 'package:campuswork/utils/page_transitions.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:campuswork/screen/home/home_page.dart';
+import 'package:campuswork/screen/messages/messages_page.dart';
+import 'package:campuswork/widgets/main_navigation.dart';
 
 final router = GoRouter(
   initialLocation: '/splash',
@@ -35,6 +40,11 @@ final router = GoRouter(
       return null;
     }
 
+    // Allow tutorial screens
+    if (state.uri.path.startsWith('/tutorial/')) {
+      return null;
+    }
+
     final isLoggedIn = AuthService().isLoggedIn;
     final currentUser = AuthService().currentUser;
 
@@ -42,15 +52,8 @@ final router = GoRouter(
       return '/';
     }
 
-    if (isLoggedIn && state.uri.path == '/') {
-      switch (currentUser!.userRole) {
-        case UserRole.student:
-          return '/student-dashboard';
-        case UserRole.lecturer:
-          return '/lecturer-dashboard';
-        case UserRole.admin:
-          return '/admin-dashboard';
-      }
+    if (isLoggedIn && (state.uri.path == '/' || state.uri.path == '/student-dashboard' || state.uri.path == '/lecturer-dashboard' || state.uri.path == '/admin-dashboard')) {
+      return '/main';
     }
 
     return null;
@@ -71,6 +74,20 @@ final router = GoRouter(
       ),
     ),
     GoRoute(
+      path: '/tutorial/:role',
+      pageBuilder: (context, state) {
+        final roleString = state.pathParameters['role']!;
+        final userRole = UserRole.values.firstWhere(
+          (role) => role.name == roleString,
+          orElse: () => UserRole.student,
+        );
+        return PageTransitions.slideTransition(
+          TutorialScreen(userRole: userRole),
+          state,
+        );
+      },
+    ),
+    GoRoute(
       path: '/',
       pageBuilder: (context, state) => PageTransitions.fadeTransition(
         const LoginPage(),
@@ -81,6 +98,13 @@ final router = GoRouter(
       path: '/register',
       pageBuilder: (context, state) => PageTransitions.slideTransition(
         const RegisterPage(),
+        state,
+      ),
+    ),
+    GoRoute(
+      path: '/main',
+      pageBuilder: (context, state) => PageTransitions.fadeTransition(
+        const MainNavigation(),
         state,
       ),
     ),
@@ -101,7 +125,7 @@ final router = GoRouter(
     GoRoute(
       path: '/admin-dashboard',
       pageBuilder: (context, state) => PageTransitions.scaleTransition(
-        AdminDashboard(currentUser: AuthService().currentUser!),
+        const AdminDashboard(),
         state,
       ),
     ),
@@ -196,6 +220,20 @@ final router = GoRouter(
       path: '/collaboration-requests',
       pageBuilder: (context, state) => PageTransitions.slideTransition(
         CollaborationRequestsPage(currentUser: AuthService().currentUser!),
+        state,
+      ),
+    ),
+    GoRoute(
+      path: '/home',
+      pageBuilder: (context, state) => PageTransitions.fadeTransition(
+        const HomePage(),
+        state,
+      ),
+    ),
+    GoRoute(
+      path: '/messages',
+      pageBuilder: (context, state) => PageTransitions.slideTransition(
+        const MessagesPage(),
         state,
       ),
     ),

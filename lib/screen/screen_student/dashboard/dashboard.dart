@@ -3,14 +3,15 @@ import 'package:go_router/go_router.dart';
 import 'package:campuswork/auth/auth_service.dart';
 import 'package:campuswork/services/project_service.dart';
 import 'package:campuswork/services/notification_services.dart';
-import 'package:campuswork/services/group_service.dart';
 import 'package:campuswork/model/student.dart';
 import 'package:campuswork/components/components.dart';
 import 'package:campuswork/screen/groups/groups_list.dart';
-import 'package:campuswork/screen/groups/create_group_button.dart';
 import 'package:campuswork/screen/collaboration/collaboration_requests_page.dart';
 import 'package:campuswork/theme/theme.dart';
-import 'dart:math' as math;
+import 'package:campuswork/widgets/sync_test_widget.dart';
+import 'package:campuswork/utils/responsive_helper.dart';
+import 'package:campuswork/widgets/app_logo.dart';
+
 
 class StudentDashboard extends StatefulWidget {
   const StudentDashboard({super.key});
@@ -37,7 +38,15 @@ class _StudentDashboardState extends State<StudentDashboard>
   @override
   void initState() {
     super.initState();
-    _student = AuthService().currentUser as Student;
+    final currentUser = AuthService().currentUser;
+    if (currentUser is Student) {
+      _student = currentUser;
+    } else {
+      // Handle case where user is not a Student
+      debugPrint('❌ Current user is not a Student: ${currentUser?.userRole}');
+      // You might want to navigate back or show an error
+      return;
+    }
     
     // Initialize animation controllers
     _animController = AnimationController(
@@ -150,6 +159,7 @@ class _StudentDashboardState extends State<StudentDashboard>
           gradient: AppTheme.primaryGradient,
         ),
         child: CustomScrollView(
+          physics: const BouncingScrollPhysics(),
           slivers: [
             // Modern Header
             _buildModernHeader(),
@@ -169,6 +179,7 @@ class _StudentDashboardState extends State<StudentDashboard>
                   child: SlideTransition(
                     position: _slideAnimation,
                     child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         const SizedBox(height: 32),
                         
@@ -186,16 +197,27 @@ class _StudentDashboardState extends State<StudentDashboard>
                         _buildContentTabs(),
                         
                         const SizedBox(height: 24),
-                        
-                        // Tab Content
-                        _buildTabContent(myProjects, recentProjects),
-                        
-                        const SizedBox(height: 100), // Space for FAB
                       ],
                     ),
                   ),
                 ),
               ),
+            ),
+            
+            // Tab Content as separate sliver
+            SliverToBoxAdapter(
+              child: Container(
+                color: Colors.white,
+                child: FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: _buildTabContent(myProjects, recentProjects),
+                ),
+              ),
+            ),
+            
+            // Bottom spacing
+            const SliverToBoxAdapter(
+              child: SizedBox(height: 100),
             ),
           ],
         ),
@@ -224,7 +246,7 @@ class _StudentDashboardState extends State<StudentDashboard>
 
   Widget _buildModernHeader() {
     return SliverAppBar(
-      expandedHeight: 280,
+      expandedHeight: 300,
       floating: false,
       pinned: true,
       backgroundColor: Colors.transparent,
@@ -245,28 +267,33 @@ class _StudentDashboardState extends State<StudentDashboard>
                     // Top Row with Avatar and Notifications
                     Row(
                       children: [
-                        // Animated Avatar
+                        // Animated Avatar amélioré
                         ScaleTransition(
                           scale: _headerAnimation,
                           child: Container(
-                            width: 64,
-                            height: 64,
+                            width: 68,
+                            height: 68,
                             decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(20),
+                              borderRadius: BorderRadius.circular(22),
                               gradient: const LinearGradient(
                                 colors: [Colors.white, Color(0xFFF0F4F8)],
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 16,
-                                  offset: const Offset(0, 8),
+                                  color: Colors.black.withOpacity(0.15),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 10),
+                                ),
+                                BoxShadow(
+                                  color: Colors.white.withOpacity(0.1),
+                                  blurRadius: 10,
+                                  offset: const Offset(-3, -3),
                                 ),
                               ],
                             ),
                             child: const Icon(
                               Icons.person,
-                              size: 32,
+                              size: 34,
                               color: Color(0xFF4A90E2),
                             ),
                           ),
@@ -274,7 +301,12 @@ class _StudentDashboardState extends State<StudentDashboard>
                         
                         const Spacer(),
                         
-                        // Notification Bell
+                        // Logo de l'app
+                        AppLogo.small(),
+                        
+                        const SizedBox(width: 16),
+                        
+                        // Notification Bell amélioré
                         SlideTransition(
                           position: Tween<Offset>(
                             begin: const Offset(1, 0),
@@ -282,8 +314,12 @@ class _StudentDashboardState extends State<StudentDashboard>
                           ).animate(_headerAnimation),
                           child: Container(
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(16),
+                              color: Colors.white.withOpacity(0.25),
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.3),
+                                width: 1,
+                              ),
                             ),
                             child: IconButton(
                               onPressed: () => context.push('/notifications'),
@@ -292,17 +328,26 @@ class _StudentDashboardState extends State<StudentDashboard>
                                   const Icon(
                                     Icons.notifications_outlined,
                                     color: Colors.white,
-                                    size: 28,
+                                    size: 26,
                                   ),
                                   if (_unreadNotifications > 0)
                                     Positioned(
                                       right: 0,
                                       top: 0,
                                       child: Container(
-                                        padding: const EdgeInsets.all(4),
-                                        decoration: const BoxDecoration(
-                                          color: Colors.red,
+                                        padding: const EdgeInsets.all(5),
+                                        decoration: BoxDecoration(
+                                          gradient: const LinearGradient(
+                                            colors: [Color(0xFFFF6B6B), Color(0xFFEE5A52)],
+                                          ),
                                           shape: BoxShape.circle,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.red.withOpacity(0.3),
+                                              blurRadius: 6,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ],
                                         ),
                                         child: Text(
                                           '$_unreadNotifications',
@@ -322,9 +367,9 @@ class _StudentDashboardState extends State<StudentDashboard>
                       ],
                     ),
                     
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 36),
                     
-                    // Welcome Text
+                    // Welcome Text amélioré
                     SlideTransition(
                       position: Tween<Offset>(
                         begin: const Offset(-0.5, 0),
@@ -337,37 +382,59 @@ class _StudentDashboardState extends State<StudentDashboard>
                             'Bonjour 👋',
                             style: TextStyle(
                               color: Colors.white.withOpacity(0.9),
-                              fontSize: 16,
+                              fontSize: 17,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 10),
                           Text(
                             _student.firstName,
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 32,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: -1,
+                              fontSize: 34,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -1.2,
+                              shadows: [
+                                Shadow(
+                                  color: Colors.black26,
+                                  offset: Offset(0, 2),
+                                  blurRadius: 4,
+                                ),
+                              ],
                             ),
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 14),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
+                              horizontal: 18,
+                              vertical: 9,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              '${_student.level} • ${_student.filiere}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
+                              color: Colors.white.withOpacity(0.25),
+                              borderRadius: BorderRadius.circular(22),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.3),
+                                width: 1,
                               ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.school,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '${_student.level} • ${_student.filiere}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -382,7 +449,15 @@ class _StudentDashboardState extends State<StudentDashboard>
       ),
       actions: [
         PopupMenuButton<String>(
-          icon: const Icon(Icons.more_vert, color: Colors.white),
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.more_vert, color: Colors.white),
+          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           onSelected: (value) async {
             switch (value) {
               case 'profile':
@@ -402,7 +477,7 @@ class _StudentDashboardState extends State<StudentDashboard>
               value: 'profile',
               child: Row(
                 children: [
-                  Icon(Icons.person),
+                  Icon(Icons.person, color: Color(0xFF4A90E2)),
                   SizedBox(width: 12),
                   Text('Mon profil'),
                 ],
@@ -412,7 +487,7 @@ class _StudentDashboardState extends State<StudentDashboard>
               value: 'settings',
               child: Row(
                 children: [
-                  Icon(Icons.settings),
+                  Icon(Icons.settings, color: Color(0xFF6B7280)),
                   SizedBox(width: 12),
                   Text('Paramètres'),
                 ],
@@ -435,16 +510,15 @@ class _StudentDashboardState extends State<StudentDashboard>
   }
 
   Widget _buildQuickStats(List<dynamic> myProjects) {
-    return Padding(
+    return ResponsiveGrid(
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: GridView.count(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        crossAxisCount: 2,
-        mainAxisSpacing: 16,
-        crossAxisSpacing: 16,
-        childAspectRatio: 1.3,
-        children: [
+      mobileColumns: 2,
+      tabletColumns: 4,
+      desktopColumns: 4,
+      mobileAspectRatio: 1.3,
+      tabletAspectRatio: 1.2,
+      desktopAspectRatio: 1.1,
+      children: [
           _ModernStatCard(
             icon: Icons.folder_open,
             title: 'Projets',
@@ -478,7 +552,6 @@ class _StudentDashboardState extends State<StudentDashboard>
             delay: 300,
           ),
         ],
-      ),
     );
   }
 
@@ -598,6 +671,12 @@ class _StudentDashboardState extends State<StudentDashboard>
             isSelected: _selectedTabIndex == 2,
             onTap: () => setState(() => _selectedTabIndex = 2),
           ),
+          const SizedBox(width: 12),
+          _ModernTab(
+            label: 'Tutoriel',
+            isSelected: _selectedTabIndex == 3,
+            onTap: () => setState(() => _selectedTabIndex = 3),
+          ),
         ],
       ),
     );
@@ -611,6 +690,11 @@ class _StudentDashboardState extends State<StudentDashboard>
         return _buildProjectsList(recentProjects, 'Projets récents', '/projects');
       case 2:
         return _buildEmptyState();
+      case 3:
+        return ResponsiveWrapper(
+          enableScrolling: true,
+          child: SyncTestWidget(currentUser: _student),
+        );
       default:
         return _buildProjectsList(myProjects, 'Mes projets', '/my-projects');
     }

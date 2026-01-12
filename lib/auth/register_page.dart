@@ -6,6 +6,7 @@ import 'package:campuswork/auth/oauth_service.dart';
 import 'package:campuswork/database/database_helper.dart';
 import 'package:campuswork/database/database_helper_extension.dart';
 import 'package:campuswork/theme/theme.dart';
+import 'package:campuswork/widgets/app_logo.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -343,24 +344,29 @@ class _RegisterPageState extends State<RegisterPage>
               position: _slideAnimation,
               child: Column(
                 children: [
-                  // Header
+                  // Header amélioré
                   _buildHeader(),
                   
-                  // Progress Indicator
+                  // Progress Indicator amélioré
                   _buildProgressIndicator(),
                   
                   // Content
                   Expanded(
                     child: Container(
-                      margin: const EdgeInsets.all(16),
+                      margin: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(24),
+                        borderRadius: BorderRadius.circular(28),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
+                            color: Colors.black.withOpacity(0.15),
+                            blurRadius: 25,
+                            offset: const Offset(0, 15),
+                          ),
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 5),
                           ),
                         ],
                       ),
@@ -376,7 +382,7 @@ class _RegisterPageState extends State<RegisterPage>
                     ),
                   ),
                   
-                  // Navigation Buttons
+                  // Navigation Buttons améliorés
                   _buildNavigationButtons(),
                 ],
               ),
@@ -389,14 +395,20 @@ class _RegisterPageState extends State<RegisterPage>
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(28),
       child: Row(
         children: [
-          IconButton(
-            onPressed: () => context.pop(),
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: IconButton(
+              onPressed: () => context.pop(),
+              icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20),
+            ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 20),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -405,18 +417,23 @@ class _RegisterPageState extends State<RegisterPage>
                   'Créer un compte',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     color: Colors.white,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5,
                   ),
                 ),
+                const SizedBox(height: 4),
                 Text(
                   'Rejoignez CampusWork dès aujourd\'hui',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withOpacity(0.9),
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
             ),
           ),
+          // Logo dans le header
+          AppLogo.small(),
         ],
       ),
     );
@@ -424,7 +441,7 @@ class _RegisterPageState extends State<RegisterPage>
 
   Widget _buildProgressIndicator() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 24),
+      margin: const EdgeInsets.symmetric(horizontal: 28),
       child: Row(
         children: List.generate(3, (index) {
           final isActive = index <= _currentStep;
@@ -432,19 +449,33 @@ class _RegisterPageState extends State<RegisterPage>
           
           return Expanded(
             child: Container(
-              height: 4,
-              margin: EdgeInsets.only(right: index < 2 ? 8 : 0),
+              height: 6,
+              margin: EdgeInsets.only(right: index < 2 ? 12 : 0),
               decoration: BoxDecoration(
+                gradient: isActive 
+                    ? const LinearGradient(
+                        colors: [Colors.white, Color(0xFFF0F4F8)],
+                      )
+                    : null,
                 color: isActive 
-                    ? Colors.white 
+                    ? null 
                     : Colors.white.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(2),
+                borderRadius: BorderRadius.circular(3),
+                boxShadow: isActive ? [
+                  BoxShadow(
+                    color: Colors.white.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ] : null,
               ),
               child: isCompleted
                   ? Container(
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(2),
+                        gradient: const LinearGradient(
+                          colors: [Colors.white, Color(0xFFF0F4F8)],
+                        ),
+                        borderRadius: BorderRadius.circular(3),
                       ),
                     )
                   : null,

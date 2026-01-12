@@ -9,6 +9,11 @@ import 'package:campuswork/components/user_avatar.dart';
 import 'package:campuswork/screen/groups/create_group_button.dart';
 import 'package:campuswork/screen/groups/groups_list.dart';
 import 'package:campuswork/screen/surveys/create_survey_page.dart';
+import 'package:campuswork/screen/screen_student/dashboard/surveys_screen.dart';
+import 'package:campuswork/widgets/sync_test_widget.dart';
+import 'package:campuswork/services/tutorial_service.dart';
+import 'package:campuswork/auth/register_page.dart';
+import 'package:campuswork/widgets/app_logo.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -21,12 +26,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
   late User _admin;
   List<User> _pendingUsers = [];
   bool _isLoading = true;
+  int _unreadNotifications = 0;
 
   @override
   void initState() {
     super.initState();
     _admin = AuthService().currentUser!;
     _loadPendingUsers();
+    _loadUnreadCount();
+  }
+
+  void _loadUnreadCount() {
+    final count = NotificationService().getUnreadCountByUser(_admin.userId);
+    setState(() => _unreadNotifications = count);
   }
 
   Future<void> _loadPendingUsers() async {
@@ -91,46 +103,44 @@ class _AdminDashboardState extends State<AdminDashboard> {
     }
   }
 
+  void _handleMenuAction(String value) {
+    switch (value) {
+      case 'profile':
+        context.push('/profile');
+        break;
+      case 'settings':
+        context.push('/settings');
+        break;
+      case 'logout':
+        _logout();
+        break;
+    }
+  }
+
+  Future<void> _logout() async {
+    await AuthService().logout();
+    if (mounted) context.go('/');
+  }
+
   @override
   Widget build(BuildContext context) {
     final allProjects = ProjectService().getAllProjects();
     final courses = ProjectService().getAllCourses();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Administration'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () => context.push('/notifications'),
-          ),
-          PopupMenuButton(
-            icon: const Icon(Icons.more_vert),
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                onTap: () {
-                  Future.delayed(Duration.zero, () async {
-                    await AuthService().logout();
-                    if (context.mounted) context.go('/');
-                  });
-                },
-                child: const Row(
-                  children: [
-                    Icon(Icons.logout),
-                    SizedBox(width: 12),
-                    Text('Déconnexion'),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: constraints.maxHeight,
+                ),
+                child: IntrinsicHeight(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
               Container(
                 margin: const EdgeInsets.all(16),
                 padding: const EdgeInsets.all(20),
@@ -211,14 +221,20 @@ class _AdminDashboardState extends State<AdminDashboard> {
               const SizedBox(height: 12),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: GridView.count(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 1.2,
-                  children: [
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    // Responsive grid based on screen width
+                    int crossAxisCount = constraints.maxWidth > 600 ? 3 : 2;
+                    double childAspectRatio = constraints.maxWidth > 600 ? 1.3 : 1.2;
+                    
+                    return GridView.count(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisCount: crossAxisCount,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: childAspectRatio,
+                      children: [
                     _buildActionCard(
                       icon: Icons.people,
                       title: 'Gestion utilisateurs',
@@ -261,7 +277,30 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       color: Colors.teal,
                       onTap: () => _showSurveyManagement(),
                     ),
-                  ],
+                    _buildActionCard(
+                      icon: Icons.person_add,
+                      title: 'Ajouter utilisateur',
+                      subtitle: 'Enregistrer nouveau',
+                      color: Colors.indigo,
+                      onTap: () => _showUserRegistration(),
+                    ),
+                    _buildActionCard(
+                      icon: Icons.sync,
+                      title: 'Test Sync',
+                      subtitle: 'Tester synchronisation',
+                      color: Colors.cyan,
+                      onTap: () => _showSyncTest(),
+                    ),
+                    _buildActionCard(
+                      icon: Icons.refresh,
+                      title: 'Reset Tutoriels',
+                      subtitle: 'Réinitialiser tutoriels',
+                      color: Colors.amber,
+                      onTap: () => _resetTutorials(),
+                    ),
+                      ],
+                    );
+                  },
                 ),
               ),
               const SizedBox(height: 24),
@@ -466,8 +505,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 ),
               ),
               const SizedBox(height: 24),
-            ],
-          ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
@@ -650,6 +693,127 @@ class _AdminDashboardState extends State<AdminDashboard> {
         builder: (context) => CreateSurveyPage(currentUser: _admin),
       ),
     );
+  }
+
+  void _showUserRegistration() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const RegisterPage(),
+      ),
+    ).then((_) {
+      // Recharger les utilisateurs en attente après l'enregistrement
+      _loadPendingUsers();
+    });
+  }
+
+  void _showSyncTest() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.8,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+        ),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.sync, color: Color(0xFF4A90E2)),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'Test de Synchronisation',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: SyncTestWidget(currentUser: _admin),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _resetTutorials() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Réinitialiser les tutoriels'),
+        content: const Text(
+          'Êtes-vous sûr de vouloir réinitialiser tous les tutoriels ? '
+          'Les utilisateurs devront refaire le tutoriel à leur prochaine connexion.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.orange),
+            child: const Text('Réinitialiser'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await TutorialService.resetAllTutorials();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.white),
+                  SizedBox(width: 12),
+                  Text('Tutoriels réinitialisés avec succès'),
+                ],
+              ),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erreur lors de la réinitialisation: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
   }
 }
 

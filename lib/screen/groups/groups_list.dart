@@ -40,12 +40,12 @@ class _GroupsListState extends State<GroupsList> {
       List<Group> groups;
       if (widget.showOnlyUserGroups) {
         if (widget.currentUser.isAdmin || widget.currentUser.isLecturer) {
-          groups = _groupService.getGroupsByCreator(widget.currentUser.userId);
+          groups = await _groupService.getGroupsByCreatorAsync(widget.currentUser.userId);
         } else {
-          groups = _groupService.getGroupsByMember(widget.currentUser.userId);
+          groups = await _groupService.getGroupsByMemberAsync(widget.currentUser.userId);
         }
       } else {
-        groups = _groupService.getAllGroups();
+        groups = await _groupService.getAllGroupsAsync();
       }
 
       setState(() {
@@ -53,7 +53,10 @@ class _GroupsListState extends State<GroupsList> {
         _filteredGroups = groups;
         _isLoading = false;
       });
+      
+      debugPrint('✅ Loaded ${groups.length} groups');
     } catch (e) {
+      debugPrint('❌ Error loading groups: $e');
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -87,21 +90,48 @@ class _GroupsListState extends State<GroupsList> {
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
-              // Recherche
-              TextField(
-                onChanged: (value) {
-                  setState(() => _searchQuery = value);
-                  _filterGroups();
-                },
-                decoration: InputDecoration(
-                  hintText: 'Rechercher un groupe...',
-                  prefixIcon: const Icon(Icons.search),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+              // Recherche avec bouton de rafraîchissement
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      onChanged: (value) {
+                        setState(() => _searchQuery = value);
+                        _filterGroups();
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'Rechercher un groupe...',
+                        prefixIcon: const Icon(Icons.search),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey[100],
+                      ),
+                    ),
                   ),
-                  filled: true,
-                  fillColor: Colors.grey[100],
-                ),
+                  const SizedBox(width: 12),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF4A90E2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: IconButton(
+                      onPressed: _isLoading ? null : _loadGroups,
+                      icon: _isLoading 
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : const Icon(Icons.refresh, color: Colors.white),
+                      tooltip: 'Actualiser les groupes',
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
 
@@ -139,7 +169,7 @@ class _GroupsListState extends State<GroupsList> {
           ),
         ),
 
-        // Liste des groupes
+        // Liste des groupes avec RefreshIndicator
         Expanded(
           child: _isLoading
               ? const LoadingState(message: 'Chargement des groupes...')
@@ -147,6 +177,7 @@ class _GroupsListState extends State<GroupsList> {
                   ? _buildEmptyState()
                   : RefreshIndicator(
                       onRefresh: _loadGroups,
+                      color: const Color(0xFF4A90E2),
                       child: ListView.builder(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         itemCount: _filteredGroups.length,

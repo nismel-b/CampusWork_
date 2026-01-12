@@ -238,43 +238,60 @@ class _SurveysScreenState extends State<SurveysScreen> {
     final responseCount = survey['responseCount'] ?? 0;
     
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        gradient: LinearGradient(
+        borderRadius: BorderRadius.circular(20),
+        gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
             Colors.white,
-            Colors.grey[50]!,
+            Color(0xFFFAFBFC),
           ],
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 25,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
           onTap: () => _viewResponses(survey['surveyId']),
           child: Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header with type badge
+                // Header with type badge and menu
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
-                        color: _getSurveyTypeColor(surveyType).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
+                        gradient: LinearGradient(
+                          colors: [
+                            _getSurveyTypeColor(surveyType),
+                            _getSurveyTypeColor(surveyType).withOpacity(0.8),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(25),
+                        boxShadow: [
+                          BoxShadow(
+                            color: _getSurveyTypeColor(surveyType).withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -282,13 +299,13 @@ class _SurveysScreenState extends State<SurveysScreen> {
                           Icon(
                             _getSurveyTypeIcon(surveyType),
                             size: 16,
-                            color: _getSurveyTypeColor(surveyType),
+                            color: Colors.white,
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 8),
                           Text(
                             _getSurveyTypeLabel(surveyType),
-                            style: TextStyle(
-                              color: _getSurveyTypeColor(surveyType),
+                            style: const TextStyle(
+                              color: Colors.white,
                               fontWeight: FontWeight.w600,
                               fontSize: 12,
                             ),
@@ -297,67 +314,74 @@ class _SurveysScreenState extends State<SurveysScreen> {
                       ),
                     ),
                     const Spacer(),
-                    PopupMenuButton<String>(
-                      icon: Icon(Icons.more_vert, color: Colors.grey[600]),
-                      itemBuilder: (context) => [
-                        const PopupMenuItem(
-                          value: 'view',
-                          child: Row(
-                            children: [
-                              Icon(Icons.visibility, size: 18),
-                              SizedBox(width: 8),
-                              Text('Voir les réponses'),
-                            ],
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: PopupMenuButton<String>(
+                        icon: Icon(Icons.more_vert, color: Colors.grey[600], size: 20),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        itemBuilder: (context) => [
+                          const PopupMenuItem(
+                            value: 'view',
+                            child: Row(
+                              children: [
+                                Icon(Icons.visibility, size: 18, color: Color(0xFF4A90E2)),
+                                SizedBox(width: 12),
+                                Text('Voir les réponses'),
+                              ],
+                            ),
                           ),
-                        ),
-                        const PopupMenuItem(
-                          value: 'delete',
-                          child: Row(
-                            children: [
-                              Icon(Icons.delete, size: 18, color: Colors.red),
-                              SizedBox(width: 8),
-                              Text('Supprimer', style: TextStyle(color: Colors.red)),
-                            ],
+                          const PopupMenuItem(
+                            value: 'delete',
+                            child: Row(
+                              children: [
+                                Icon(Icons.delete, size: 18, color: Colors.red),
+                                SizedBox(width: 12),
+                                Text('Supprimer', style: TextStyle(color: Colors.red)),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
-                      onSelected: (value) async {
-                        if (value == 'view') {
-                          _viewResponses(survey['surveyId']);
-                        } else if (value == 'delete') {
-                          _deleteSurvey(survey['surveyId']);
-                        }
-                      },
+                        ],
+                        onSelected: (value) async {
+                          if (value == 'view') {
+                            _viewResponses(survey['surveyId']);
+                          } else if (value == 'delete') {
+                            _deleteSurvey(survey['surveyId']);
+                          }
+                        },
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
                 
-                // Question
+                // Question with better typography
                 Text(
                   survey['question'] ?? 'Question non disponible',
                   style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
                     color: Color(0xFF1A1D29),
                     height: 1.4,
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
                 
-                // Stats
+                // Stats with modern design
                 Row(
                   children: [
-                    _buildStatChip(
-                      icon: Icons.people,
+                    _buildModernStatChip(
+                      icon: Icons.people_outline,
                       label: '$responseCount réponse${responseCount > 1 ? 's' : ''}',
-                      color: Colors.blue,
+                      color: const Color(0xFF4A90E2),
                     ),
                     const SizedBox(width: 12),
-                    _buildStatChip(
+                    _buildModernStatChip(
                       icon: Icons.access_time,
                       label: _formatDate(survey['createdAt']),
-                      color: Colors.grey,
+                      color: const Color(0xFF6B7280),
                     ),
                   ],
                 ),
@@ -365,6 +389,39 @@ class _SurveysScreenState extends State<SurveysScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildModernStatChip({
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: color.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -503,43 +560,144 @@ class _SurveysScreenState extends State<SurveysScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Sondages'),
-        backgroundColor: const Color(0xFF3B82F6),
+        title: const Text(
+          'Sondages',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 24,
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF667eea),
+                Color(0xFF764ba2),
+              ],
+            ),
+          ),
+        ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () => _showCreateSurveyDialog(),
+          Container(
+            margin: const EdgeInsets.only(right: 16),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.add, color: Colors.white),
+              onPressed: () => _showCreateSurveyDialog(),
+            ),
           ),
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _surveys.isEmpty
-              ? const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.poll, size: 100, color: Colors.grey),
-                      SizedBox(height: 20),
-                      Text(
-                        'Aucun sondage',
-                        style: TextStyle(fontSize: 18, color: Colors.grey),
-                      ),
-                    ],
+          ? const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF4A90E2)),
                   ),
-                )
+                  SizedBox(height: 16),
+                  Text(
+                    'Chargement des sondages...',
+                    style: TextStyle(
+                      color: Color(0xFF6B7280),
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : _surveys.isEmpty
+              ? _buildEmptyState()
               : RefreshIndicator(
                   onRefresh: _loadSurveys,
+                  color: const Color(0xFF4A90E2),
                   child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(20),
                     itemCount: _surveys.length,
                     itemBuilder: (context, index) {
                       final survey = _surveys[index];
-                      return _buildSurveyCard(survey);
+                      return AnimatedContainer(
+                        duration: Duration(milliseconds: 300 + (index * 100)),
+                        curve: Curves.easeOutCubic,
+                        child: _buildSurveyCard(survey),
+                      );
                     },
                   ),
                 ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(48),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    const Color(0xFF4A90E2).withOpacity(0.1),
+                    const Color(0xFF7B68EE).withOpacity(0.1),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(30),
+              ),
+              child: const Icon(
+                Icons.poll,
+                size: 60,
+                color: Color(0xFF4A90E2),
+              ),
+            ),
+            const SizedBox(height: 32),
+            Text(
+              'Aucun sondage',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF1A1D29),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Créez votre premier sondage pour commencer à recueillir des opinions',
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: const Color(0xFF6B7280),
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            ElevatedButton.icon(
+              onPressed: () => _showCreateSurveyDialog(),
+              icon: const Icon(Icons.add),
+              label: const Text('Créer un sondage'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF4A90E2),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                elevation: 0,
+                shadowColor: const Color(0xFF4A90E2).withOpacity(0.3),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

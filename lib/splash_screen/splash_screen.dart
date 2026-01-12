@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:campuswork/theme/theme.dart';
+import 'package:campuswork/widgets/app_logo.dart';
 import 'dart:math' as math;
 
 class SplashScreen extends StatefulWidget {
@@ -132,7 +133,7 @@ class _SplashScreenState extends State<SplashScreen>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // 3D Animated Logo
+              // Logo animé personnalisé
               AnimatedBuilder(
                 animation: Listenable.merge([
                   _rotationAnimation,
@@ -148,18 +149,8 @@ class _SplashScreenState extends State<SplashScreen>
                         ..rotateY(_rotationAnimation.value)
                         ..rotateX(_rotationAnimation.value * 0.3),
                       child: Container(
-                        width: 120,
-                        height: 120,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(24),
-                          gradient: const LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              Colors.white,
-                              Color(0xFFF0F4F8),
-                            ],
-                          ),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withOpacity(0.3),
@@ -173,10 +164,9 @@ class _SplashScreenState extends State<SplashScreen>
                             ),
                           ],
                         ),
-                        child: const Icon(
-                          Icons.school,
-                          size: 60,
-                          color: Color(0xFF4A90E2),
+                        child: const AppLogo(
+                          size: 120,
+                          showText: false,
                         ),
                       ),
                     ),

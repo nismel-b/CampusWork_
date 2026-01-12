@@ -13,6 +13,8 @@ import 'package:campuswork/screen/surveys/create_survey_page.dart';
 import 'package:campuswork/screen/screen_student/dashboard/surveys_screen.dart';
 import 'package:campuswork/screen/screen_lecturer/comments/my_comments_page.dart';
 import 'package:campuswork/screen/screen_lecturer/similarity/similarity_check_page.dart';
+import 'package:campuswork/widgets/sync_test_widget.dart';
+import 'package:campuswork/widgets/app_logo.dart';
 
 class LecturerDashboard extends StatefulWidget {
   const LecturerDashboard({super.key});
@@ -51,92 +53,6 @@ class _LecturerDashboardState extends State<LecturerDashboard> {
     final evaluated = filteredProjects.where((p) => p.grade != null && p.grade!.isNotEmpty).length;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Tableau de bord Enseignant'),
-        actions: [
-          Stack(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.notifications_outlined),
-                onPressed: () => context.push('/notifications'),
-              ),
-              if (_unreadNotifications > 0)
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                    ),
-                    constraints: const BoxConstraints(
-                      minWidth: 16,
-                      minHeight: 16,
-                    ),
-                    child: Text(
-                      '$_unreadNotifications',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert),
-            itemBuilder: (context) => <PopupMenuEntry<String>>[
-              const PopupMenuItem<String>(
-                value: 'profile',
-                child: Row(
-                  children: [
-                    Icon(Icons.person),
-                    SizedBox(width: 12),
-                    Text('Profil'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem<String>(
-                value: 'settings',
-                child: Row(
-                  children: [
-                    Icon(Icons.settings),
-                    SizedBox(width: 12),
-                    Text('Paramètres'),
-                  ],
-                ),
-              ),
-              const PopupMenuDivider(),
-              const PopupMenuItem<String>(
-                value: 'logout',
-                child: Row(
-                  children: [
-                    Icon(Icons.logout),
-                    SizedBox(width: 12),
-                    Text('Déconnexion'),
-                  ],
-                ),
-              ),
-            ],
-            onSelected: (String value) async {
-              switch (value) {
-                case 'profile':
-                case 'settings':
-                  context.push('/profile-settings', extra: _lecturer);
-                  break;
-                case 'logout':
-                  await AuthService().logout();
-                  if (context.mounted) context.go('/');
-                  break;
-              }
-            },
-          ),
-        ],
-      ),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
@@ -267,6 +183,13 @@ class _LecturerDashboardState extends State<LecturerDashboard> {
                       color: Colors.indigo,
                       onTap: () => _showSurveyManagement(),
                     ),
+                    _buildActionCard(
+                      icon: Icons.sync,
+                      title: 'Test Sync',
+                      subtitle: 'Tester synchronisation',
+                      color: Colors.cyan,
+                      onTap: () => _showSyncTest(),
+                    ),
                   ],
                 ),
               ),
@@ -371,33 +294,31 @@ class _LecturerDashboardState extends State<LecturerDashboard> {
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(8),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(icon, color: color, size: 24),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                textAlign: TextAlign.center,
+                child: Icon(icon, color: color, size: 20),
               ),
               const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.grey[600],
-                    ),
-                textAlign: TextAlign.center,
+              Flexible(
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 10,
+                      ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
@@ -577,6 +498,59 @@ class _LecturerDashboardState extends State<LecturerDashboard> {
       context,
       MaterialPageRoute(
         builder: (context) => SurveysScreen(currentUser: _lecturer),
+      ),
+    );
+  }
+
+  void _showSyncTest() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.8,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+        ),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.sync, color: Color(0xFF4A90E2)),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'Test de Synchronisation',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: SyncTestWidget(currentUser: _lecturer),
+            ),
+          ],
+        ),
       ),
     );
   }

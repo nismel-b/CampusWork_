@@ -580,7 +580,7 @@ class AuthService {
       );
 
       // Create default lecturer
-      await registerUser(
+      final lecturer = await registerUser(
         firstname: 'Lecturer',
         lastname: 'Test',
         username: 'lecturer',
@@ -590,8 +590,19 @@ class AuthService {
         userRole: UserRole.lecturer,
       );
 
+      // Add lecturer data
+      if (lecturer != null) {
+        final db = await _dbHelper.database;
+        await DatabaseExtensions.insertLecturer(
+          db: db,
+          userId: lecturer.userId,
+          uniteDenseignement: 'Informatique',
+          section: 'Génie Logiciel',
+        );
+      }
+
       // Create default student
-      await registerUser(
+      final student = await registerUser(
         firstname: 'Student',
         lastname: 'Test',
         username: 'student',
@@ -600,6 +611,22 @@ class AuthService {
         password: 'student123',
         userRole: UserRole.student,
       );
+
+      // Add student data
+      if (student != null) {
+        final db = await _dbHelper.database;
+        await DatabaseExtensions.insertStudent(
+          db: db,
+          userId: student.userId,
+          matricule: 'STU001',
+          birthday: DateTime(2000, 1, 1),
+          level: 'Licence 3',
+          semester: 'Semestre 5',
+          section: 'Génie Logiciel',
+          filiere: 'Informatique',
+          academicYear: '2024-2025',
+        );
+      }
 
       debugPrint('✅ Default users created successfully');
     } catch (e) {
@@ -788,6 +815,30 @@ class AuthService {
             githubLink: studentData['githubLink'] as String?,
             linkedinLink: studentData['linkedinLink'] as String?,
           );
+        } else {
+          // Create Student with default values if student data not found
+          debugPrint('⚠️ Student data not found for userId: $userId, creating with defaults');
+          return Student(
+            userId: userId,
+            username: userData['username'] as String,
+            firstName: userData['firstname'] as String,
+            lastName: userData['lastname'] as String,
+            email: userData['email'] as String? ?? '',
+            phonenumber: userData['phonenumber'] as String? ?? '',
+            password: userData['password'] as String,
+            isApproved: (userData['isApproved'] as int) == 1,
+            createdAt: DateTime.parse(userData['createdAt'] as String),
+            updatedAt: DateTime.parse(userData['updatedAt'] as String),
+            matricule: 'N/A',
+            birthday: DateTime.now().subtract(const Duration(days: 6570)), // ~18 years
+            level: 'N/A',
+            semester: 'N/A',
+            section: 'N/A',
+            filiere: 'N/A',
+            academicYear: 'N/A',
+            githubLink: null,
+            linkedinLink: null,
+          );
         }
       } else if (userRole == UserRole.lecturer) {
         // Get lecturer-specific data
@@ -815,10 +866,30 @@ class AuthService {
             validationRequirements: lecturerData['validationRequirements'] as String?,
             finalSubmissionRequirements: lecturerData['finalSubmissionRequirements'] as String?,
           );
+        } else {
+          // Create Lecturer with default values if lecturer data not found
+          debugPrint('⚠️ Lecturer data not found for userId: $userId, creating with defaults');
+          return Lecturer(
+            userId: userId,
+            username: userData['username'] as String,
+            firstName: userData['firstname'] as String,
+            lastName: userData['lastname'] as String,
+            email: userData['email'] as String? ?? '',
+            phonenumber: userData['phonenumber'] as String? ?? '',
+            password: userData['password'] as String,
+            isApproved: (userData['isApproved'] as int) == 1,
+            createdAt: DateTime.parse(userData['createdAt'] as String),
+            updatedAt: DateTime.parse(userData['updatedAt'] as String),
+            uniteDenseignement: 'N/A',
+            section: 'N/A',
+            evaluationGrid: null,
+            validationRequirements: null,
+            finalSubmissionRequirements: null,
+          );
         }
       }
 
-      // Default to basic User for admin or if role-specific data not found
+      // Default to basic User for admin
       return User(
         userId: userId,
         username: userData['username'] as String,

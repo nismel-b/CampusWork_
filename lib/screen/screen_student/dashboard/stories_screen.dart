@@ -18,7 +18,6 @@ class _StoriesScreenState extends State<StoriesScreen> {
   final ProjectService _projectService = ProjectService();
   List<Map<String, dynamic>> _stories = [];
   List<Map<String, dynamic>> _projects = [];
-  String? _selectedProjectId;
   bool _isLoading = true;
 
   @override
