@@ -42,7 +42,6 @@ const ProjectCard: React.FC<{ project: Project; onEdit?: (project: Project) => v
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-          
           {/* Badge vidéo disponible */}
           {project.demoVideo && (
             <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-xl flex items-center gap-2">
@@ -52,15 +51,42 @@ const ProjectCard: React.FC<{ project: Project; onEdit?: (project: Project) => v
               <span className="text-xs font-black text-slate-800">Vidéo</span>
             </div>
           )}
-        </div>
-      )}
+        {/*</div>
+        )}*/}
+          {/* 🆕 Badge fichier disponible */}
+          {project.attachedFile && (
+            <div className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-xl flex items-center gap-2">
+              <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+              </svg>
+              <span className="text-xs font-black text-slate-800">Document</span>
+            </div>
+          )}
+          </div>
+        )}
       
       <div className="p-7 flex flex-col flex-1">
         {/* Actions en haut à droite */}
         <div className="absolute top-4 right-4 flex gap-2 z-10">
           {/* ... boutons existants ... */}
         </div>
-        {/* end modif */}
+        
+        {/* 🆕 Technologies (avant les ressources) */}
+        {project.technologies && project.technologies.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {project.technologies.slice(0, 3).map((tech, idx) => (
+              <span key={idx} className="px-3 py-1 bg-purple-50 text-purple-600 rounded-lg text-xs font-bold border border-purple-200">
+                {tech}
+              </span>
+            ))}
+            {project.technologies.length > 3 && (
+              <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold">
+                +{project.technologies.length - 3}
+              </span>
+            )}
+          </div>
+        )}
+        
       </div>
      {/*<div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-7 flex flex-col hover:shadow-xl transition-all duration-300 group w-[340px] flex-shrink-0 snap-start border-b-4 border-b-transparent hover:border-b-blue-500 relative"></div>*/}
       <div className="absolute top-4 right-4 flex gap-2">

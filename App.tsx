@@ -12,6 +12,8 @@ import { ICONS } from './constants';
 import { translations } from './translations';
 import { apiGateway } from './api/gateway';
 import MediaUploader from './components/MediaUploader';
+import FileUploader from './components/FileUploader';
+import TechTagsInput from './components/TechTagsInput';
 
 const LETTER_GRADES: LetterGrade[] = ['A', 'B+', 'B', 'C+', 'C', 'D+', 'D', 'F'];
 
@@ -22,6 +24,8 @@ const App: React.FC = () => {
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [forgotEmail, setForgotEmail] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [signupData, setSignupData] = useState({
     name: '',
     email: '',
@@ -446,7 +450,9 @@ const App: React.FC = () => {
       studentLevel: currentUser?.level || '',
       collaborators: [],
       tags: [],
-      grade: undefined
+      grade: undefined,
+      attachedFile: undefined,
+      technologies: []
     });
     setView('project_edit');
   };
@@ -558,6 +564,7 @@ const App: React.FC = () => {
 
           {authMode === 'login' ? (
             <form onSubmit={handleLogin} className="space-y-6 animate-fadeIn">
+              {/* Dans le formulaire de connexion :*/}
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-4 block">Email Académique</label>
                 <div className="relative">
@@ -567,14 +574,49 @@ const App: React.FC = () => {
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between items-center px-4">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Code d'accès</label>
-                  <button type="button" onClick={() => setAuthMode('forgot')} className="text-[9px] font-black text-blue-600 uppercase tracking-widest hover:underline">Oublié ?</button>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                    Code d'accès
+                  </label>
+                  <button 
+                    type="button" 
+                    onClick={() => setAuthMode('forgot')} 
+                    className="text-[9px] font-black text-blue-600 uppercase tracking-widest hover:underline"
+                  >
+                    Oublié ?
+                  </button>
                 </div>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none text-slate-400"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 00-2 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg></div>
-                  <input type="password" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} className="w-full pl-14 pr-8 py-5 bg-slate-50 border-2 border-slate-100 rounded-[2rem] font-bold text-slate-900 outline-none focus:border-blue-500 focus:bg-white transition-all shadow-sm" placeholder="••••••••" />
+                  <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none text-slate-400">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  </div>
+                  <input 
+                    type={showPassword ? "text" : "password"} 
+                    value={loginPassword} 
+                    onChange={e => setLoginPassword(e.target.value)} 
+                    className="w-full pl-14 pr-14 py-5 bg-slate-50 border-2 border-slate-100 rounded-[2rem] font-bold text-slate-900 outline-none focus:border-blue-500 focus:bg-white transition-all shadow-sm" 
+                    placeholder="••••••••" 
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-6 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    {showPassword ? (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                      </svg>
+                    ) : (
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    )}
+                  </button>
                 </div>
               </div>
+
               <div className="pt-4">
                 <button type="submit" className="w-full py-6 bg-blue-600 text-white rounded-[2rem] font-black uppercase tracking-[0.2em] text-xs shadow-2xl shadow-blue-200 hover:bg-blue-700 active:scale-95 transition-all mb-8">Connexion Immédiate</button>
                 <div className="text-center"><span className="text-slate-400 font-bold text-sm">Pas encore membre ?</span><button type="button" onClick={() => setAuthMode('signup')} className="text-blue-600 font-black text-sm hover:underline decoration-2 underline-offset-4 ml-1">Créer mon profil</button></div>
@@ -614,6 +656,24 @@ const App: React.FC = () => {
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-4 block">Mot de passe</label>
                 <input type="password" value={signupData.password} onChange={e => setSignupData({...signupData, password: e.target.value})} className="w-full px-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-900 outline-none focus:border-blue-500 transition-all" placeholder="••••••••" />
+                {/* showSignupPassword logic */}
+                <button
+                  type="button"
+                  onClick={() => setShowSignupPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-6 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  {showSignupPassword ? (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  )}
+                </button>
+                {/* ShowSignupPassword end */}
               </div>
               <div className="pt-4 space-y-4">
                 <button type="submit" className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-2xl shadow-blue-200 hover:bg-blue-700 active:scale-95 transition-all">Valider mon inscription</button>
@@ -722,7 +782,6 @@ const App: React.FC = () => {
                     maxSize={100}
                     />
                   </div>
-  
                   <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-6">
                     <div className="flex items-start gap-3">
                       <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -740,6 +799,51 @@ const App: React.FC = () => {
                   </div>
                 </div>
                 {/* fin ajout image video*/}
+
+                {/* ajout de fichier, technologies, tags */}
+                
+                {/* 🆕 Section Fichier Annexe */}
+                <div className="space-y-8">
+                  <h3 className="text-xl font-black text-slate-900 uppercase italic tracking-tighter px-4 border-l-4 border-amber-500">
+                    Document Annexe
+                  </h3>
+                  <FileUploader
+                    currentFile={editingProject.attachedFile}
+                    onUploadComplete={(file) => setEditingProject({...editingProject, attachedFile: file})}
+                    onRemove={() => setEditingProject({...editingProject, attachedFile: undefined})}
+                  />
+                </div>
+
+                {/* 🆕 Section Technologies */}
+                <div className="space-y-8">
+                  <h3 className="text-xl font-black text-slate-900 uppercase italic tracking-tighter px-4 border-l-4 border-purple-500">
+                    Stack Technique
+                  </h3>
+                  <TechTagsInput
+                    label="Technologies Utilisées"
+                    placeholder="Ex: React, Node.js, MongoDB..."
+                    items={editingProject.technologies || []}
+                    onChange={(techs) => setEditingProject({...editingProject, technologies: techs})}
+                    icon="tech"
+                    maxItems={15}
+                  />
+                </div>
+
+                {/* 🆕 Section Tags (après Technologies) */}
+                <div className="space-y-8">
+                  <h3 className="text-xl font-black text-slate-900 uppercase italic tracking-tighter px-4 border-l-4 border-blue-500">
+                    Tags & Mots-clés
+                  </h3>
+                  <TechTagsInput
+                    label="Tags de Catégorisation"
+                    placeholder="Ex: IA, Web Dev, Mobile..."
+                    items={editingProject.tags || []}
+                    onChange={(tags) => setEditingProject({...editingProject, tags: tags})}
+                    icon="tag"
+                    maxItems={10}
+                  />
+                </div>
+                  {/* fin ajout fichier, technologie, tag */}
 
                    <div className="space-y-8"><h3 className="text-xl font-black text-slate-900 uppercase italic tracking-tighter px-4 border-l-4 border-blue-600">Informations Enseignant</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-10"><div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-4">Nom de l'Enseignant</label><input type="text" value={editingProject.lecturerName} onChange={e => setEditingProject({...editingProject, lecturerName: e.target.value})} className="w-full px-8 py-5 bg-slate-50 border-2 border-slate-100 rounded-[2rem] font-bold text-slate-900 outline-none focus:border-blue-500 transition-all" placeholder="Dr. Dupont" /></div><div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-4">Email Académique</label><input type="email" value={editingProject.lecturerEmail} onChange={e => setEditingProject({...editingProject, lecturerEmail: e.target.value})} className="w-full px-8 py-5 bg-slate-50 border-2 border-slate-100 rounded-[2rem] font-bold text-slate-900 outline-none focus:border-blue-500 transition-all" placeholder="prof@school.edu" /></div></div></div>
                    <div className="space-y-8"><h3 className="text-xl font-black text-slate-900 uppercase italic tracking-tighter px-4 border-l-4 border-emerald-500">Ressources & Liens</h3><div className="grid grid-cols-1 md:grid-cols-3 gap-8"><div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-4">GitHub</label><input type="text" value={editingProject.githubLink} onChange={e => setEditingProject({...editingProject, githubLink: e.target.value})} className="w-full px-8 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-600 outline-none" placeholder="https://..." /></div><div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-4">LinkedIn</label><input type="text" value={editingProject.linkedinLink} onChange={e => setEditingProject({...editingProject, linkedinLink: e.target.value})} className="w-full px-8 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-600 outline-none" placeholder="https://..." /></div><div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-4">Autre (Demo, PDF...)</label><input type="text" value={editingProject.otherLink} onChange={e => setEditingProject({...editingProject, otherLink: e.target.value})} className="w-full px-8 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-600 outline-none" placeholder="https://..." /></div></div></div>
@@ -788,6 +892,62 @@ const App: React.FC = () => {
                         className="w-full h-96 object-cover"
                       />
                     ) : null}
+                  </div>
+                )}
+
+                {/* 🆕 Section Technologies */}
+                {consultingProject.technologies && consultingProject.technologies.length > 0 && (
+                  <div className="bg-white p-10 rounded-[3.5rem] border border-slate-100 shadow-lg">
+                    <h4 className="font-black text-slate-900 uppercase tracking-tighter italic mb-6 border-b-2 border-purple-600 w-fit pb-1">
+                      Stack Technique
+                    </h4>
+                    <div className="flex flex-wrap gap-3">
+                      {consultingProject.technologies.map((tech, idx) => (
+                        <span
+                          key={idx}
+                          className="px-5 py-3 bg-purple-50 text-purple-700 rounded-2xl text-sm font-black border-2 border-purple-200 hover:bg-purple-600 hover:text-white transition-all"
+                        >
+                          {tech}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 🆕 Section Fichier Annexe */}
+                {consultingProject.attachedFile && (
+                  <div className="bg-gradient-to-br from-blue-50 to-purple-50 p-10 rounded-[3.5rem] border-2 border-blue-100 shadow-lg">
+                    <h4 className="font-black text-slate-900 uppercase tracking-tighter italic mb-6 flex items-center gap-3">
+                      <svg className="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+                      </svg>
+                      Document Annexe
+                    </h4>
+                    <div className="bg-white rounded-2xl p-6 flex items-center gap-4 group hover:shadow-xl transition-all">
+                      <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                        <svg className="w-8 h-8 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-black text-slate-900 text-lg mb-1">{consultingProject.attachedFile.name}</p>
+                        <p className="text-sm text-slate-500 font-medium">
+                          {(consultingProject.attachedFile.size / (1024 * 1024)).toFixed(2)} MB • {consultingProject.attachedFile.type.toUpperCase()}
+                        </p>
+                      </div>
+                      
+                        href={consultingProject.attachedFile.url}
+                        download={consultingProject.attachedFile.name}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-8 py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-blue-700 transition-all shadow-lg flex items-center gap-2"
+                        <a>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Télécharger
+                      </a>
+                    </div>
                   </div>
                 )}
             
@@ -858,9 +1018,138 @@ const App: React.FC = () => {
                   className="hidden" 
                   onChange={handleAvatarChange} 
                 />
-                <div className="absolute -bottom-2 -right-2 bg-emerald-500 w-8 h-8 rounded-full border-4 border-white shadow-lg"></div></div><div className="w-full space-y-12"><div className="text-center"><h3 className="text-3xl font-black text-slate-900 uppercase italic tracking-tighter">Profil Public</h3><p className="text-slate-500 font-bold text-xs uppercase tracking-[0.2em] mt-2">Gérez vos informations académiques</p></div><div className="grid grid-cols-1 md:grid-cols-2 gap-10"><div className="space-y-2"><label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-4">Nom Complet</label><input type="text" value={profileForm.name || ''} onChange={e => setProfileForm({...profileForm, name: e.target.value})} className="w-full px-8 py-5 bg-slate-50 border-2 border-slate-100 rounded-[2rem] font-bold text-slate-900 outline-none focus:border-blue-500 transition-all" /></div><div className="space-y-2"><label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-4">Email Académique</label><input type="email" value={profileForm.email || ''} onChange={e => setProfileForm({...profileForm, email: e.target.value})} className="w-full px-8 py-5 bg-slate-50 border-2 border-slate-100 rounded-[2rem] font-bold text-slate-900 outline-none focus:border-blue-500 transition-all" /></div><div className="space-y-2"><label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-4">Statut Actuel</label><select value={profileForm.status || ''} onChange={e => setProfileForm({...profileForm, status: e.target.value})} className="w-full px-8 py-5 bg-slate-50 border-2 border-slate-100 rounded-[2rem] font-bold text-slate-900 outline-none focus:border-blue-500 transition-all appearance-none"><option value="Undergraduate">Étudiant (Undergraduate)</option><option value="Graduate">Diplômé (Graduate)</option><option value="Alumni">Ancien (Alumni)</option><option value="Staff">Personnel (Staff)</option><option value="Faculty">Enseignant (Faculty)</option></select></div><div className="space-y-2"><label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-4">Cycle Académique</label><select value={profileForm.cycle || ''} onChange={e => setProfileForm({...profileForm, cycle: e.target.value})} className="w-full px-8 py-5 bg-slate-50 border-2 border-slate-100 rounded-[2rem] font-bold text-slate-900 outline-none focus:border-blue-500 transition-all appearance-none"><option value="Licence">Licence / Bachelor</option><option value="Master">Master</option><option value="Doctorat">Doctorat / PhD</option><option value="Administration">Administration</option><option value="Expertise">Expertise Professionnelle</option></select></div></div><div className="space-y-2"><label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-4">Biographie & Objectifs</label><textarea rows={4} value={profileForm.bio || ''} onChange={e => setProfileForm({...profileForm, bio: e.target.value})} className="w-full px-8 py-6 bg-slate-50 border-2 border-slate-100 rounded-[2.5rem] font-bold text-slate-800 outline-none focus:border-blue-500 transition-all resize-none" placeholder="Parlez-nous de vos passions et de votre parcours..." /></div><div className="pt-6 border-t border-slate-100 flex gap-6"><button onClick={handleSaveProfile} className="flex-1 py-5 bg-blue-600 text-white rounded-[2rem] font-black uppercase tracking-[0.2em] text-[10px] shadow-2xl shadow-blue-200 hover:bg-blue-700 active:scale-95 transition-all">Sauvegarder les modifications</button></div></div></div>
+                </div>
+                <div className="w-full space-y-12">
+                  <div className="text-center">
+                    <h3 className="text-3xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter">
+                      Profil Public
+                    </h3>
+                    <p className="text-slate-500 dark:text-slate-400 font-bold text-xs uppercase tracking-[0.2em] mt-2">
+                      Gérez vos informations académiques
+                    </p>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                    {/* Nom Complet */}
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest px-4">
+                        Nom Complet
+                      </label>
+                      <input 
+                        type="text" 
+                        value={profileForm.name || ''} 
+                        onChange={e => setProfileForm({...profileForm, name: e.target.value})} 
+                        className="w-full px-8 py-5 bg-slate-50 dark:bg-slate-700 border-2 border-slate-100 dark:border-slate-600 rounded-[2rem] font-bold text-slate-900 dark:text-white outline-none focus:border-blue-500 transition-all" 
+                      />
+                    </div>
+                    
+                    {/* Email (Non Modifiable) */}
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest px-4 flex items-center gap-2">
+                        Email Académique
+                        <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                      </label>
+                      <input 
+                        type="email" 
+                        value={profileForm.email || ''} 
+                        disabled
+                        className="w-full px-8 py-5 bg-slate-100 dark:bg-slate-700/50 border-2 border-slate-200 dark:border-slate-600 rounded-[2rem] font-bold text-slate-500 dark:text-slate-400 outline-none cursor-not-allowed" 
+                      />
+                      <p className="text-xs text-slate-400 dark:text-slate-500 px-4 font-medium">
+                        🔒 L'email ne peut pas être modifié pour des raisons de sécurité
+                      </p>
+                    </div>
+
+                    {/* Département (Nouveau) */}
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest px-4">
+                        Département
+                      </label>
+                      <select 
+                        value={profileForm.department || ''} 
+                        onChange={e => setProfileForm({...profileForm, department: e.target.value})} 
+                        className="w-full px-8 py-5 bg-slate-50 dark:bg-slate-700 border-2 border-slate-100 dark:border-slate-600 rounded-[2rem] font-bold text-slate-900 dark:text-white outline-none focus:border-blue-500 transition-all appearance-none"
+                      >
+                        <option value="">Sélectionner un département</option>
+                        <option value="Informatique">Informatique</option>
+                        <option value="Mathématiques">Mathématiques</option>
+                        <option value="Physique">Physique</option>
+                        <option value="Chimie">Chimie</option>
+                        <option value="Biologie">Biologie</option>
+                        <option value="Génie Civil">Génie Civil</option>
+                        <option value="Génie Électrique">Génie Électrique</option>
+                        <option value="Génie Mécanique">Génie Mécanique</option>
+                        <option value="Sciences Économiques">Sciences Économiques</option>
+                        <option value="Lettres & Langues">Lettres & Langues</option>
+                      </select>
+                    </div>
+                    
+                    {/* Statut Actuel */}
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest px-4">
+                        Statut Actuel
+                      </label>
+                      <select 
+                        value={profileForm.status || ''} 
+                        onChange={e => setProfileForm({...profileForm, status: e.target.value})} 
+                        className="w-full px-8 py-5 bg-slate-50 dark:bg-slate-700 border-2 border-slate-100 dark:border-slate-600 rounded-[2rem] font-bold text-slate-900 dark:text-white outline-none focus:border-blue-500 transition-all appearance-none"
+                      >
+                        <option value="Undergraduate">Étudiant (Undergraduate)</option>
+                        <option value="Graduate">Diplômé (Graduate)</option>
+                        <option value="Alumni">Ancien (Alumni)</option>
+                        <option value="Staff">Personnel (Staff)</option>
+                        <option value="Faculty">Enseignant (Faculty)</option>
+                      </select>
+                    </div>
+                    
+                    {/* Cycle Académique */}
+                    <div className="space-y-2 md:col-span-2">
+                      <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest px-4">
+                        Cycle Académique
+                      </label>
+                      <select 
+                        value={profileForm.cycle || ''} 
+                        onChange={e => setProfileForm({...profileForm, cycle: e.target.value})} 
+                        className="w-full px-8 py-5 bg-slate-50 dark:bg-slate-700 border-2 border-slate-100 dark:border-slate-600 rounded-[2rem] font-bold text-slate-900 dark:text-white outline-none focus:border-blue-500 transition-all appearance-none"
+                      >
+                        <option value="Licence">Licence / Bachelor</option>
+                        <option value="Master">Master</option>
+                        <option value="Doctorat">Doctorat / PhD</option>
+                        <option value="Administration">Administration</option>
+                        <option value="Expertise">Expertise Professionnelle</option>
+                      </select>
+                    </div>
+                  </div>
+                  
+                  {/* Biographie */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest px-4">
+                      Biographie & Objectifs
+                    </label>
+                    <textarea 
+                      rows={4} 
+                      value={profileForm.bio || ''} 
+                      onChange={e => setProfileForm({...profileForm, bio: e.target.value})} 
+                      className="w-full px-8 py-6 bg-slate-50 dark:bg-slate-700 border-2 border-slate-100 dark:border-slate-600 rounded-[2.5rem] font-bold text-slate-800 dark:text-white outline-none focus:border-blue-500 transition-all resize-none" 
+                      placeholder="Parlez-nous de vos passions et de votre parcours..." 
+                    />
+                  </div>
+                  
+                  {/* Boutons */}
+                  <div className="pt-6 border-t border-slate-100 dark:border-slate-700 flex gap-6">
+                    <button 
+                      onClick={handleSaveProfile} 
+                      className="flex-1 py-5 bg-blue-600 hover:bg-blue-700 text-white rounded-[2rem] font-black uppercase tracking-[0.2em] text-[10px] shadow-2xl shadow-blue-200 dark:shadow-none transition-all"
+                    >
+                      Sauvegarder les modifications
+                    </button>
+                  </div>
+                </div>
               </div>
-            )}
+            </div>
+          )}
           </div>
         </div>
       </main>

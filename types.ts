@@ -25,8 +25,8 @@ export interface User {
   pending?: boolean;
   banned?: boolean;
   bio?: string;
-  status?: string; // e.g., 'Diplômé', 'Étudiant', 'Ancien'
-  cycle?: string;  // e.g., 'Licence', 'Master', 'Doctorat'
+  status?: string;
+  cycle?: string;
 }
 
 export interface Collaborator {
@@ -39,7 +39,7 @@ export interface Review {
   id: string;
   authorId: string;
   authorName: string;
-  rating: number; // 0-20
+  rating: number;
   comment: string;
   createdAt: string;
 }
@@ -68,6 +68,23 @@ export interface Project {
   likes?: number;
   likedBy?: string[];
   reviews?: Review[];
+  
+  // 🆕 NOUVEAUX CHAMPS MÉDIA
+  coverImage?: string;      // URL de l'image de couverture (Cloudinary)
+  demoVideo?: string;       // URL de la vidéo de démo (Cloudinary ou YouTube/Vimeo)
+  videoType?: 'upload' | 'youtube' | 'vimeo'; // Type de vidéo
+  
+  // 🆕 FICHIERS JOINTS
+  attachedFile?: {
+    url: string;
+    name: string;
+    type: 'pdf' | 'docx' | 'pptx';
+    size: number; // en bytes
+    uploadedAt: string;
+  };
+  
+  // 🆕 TECHNOLOGIES
+  technologies?: string[]; // Ex: ['React', 'Node.js', 'MongoDB']
 }
 
 export interface Post {
@@ -129,6 +146,7 @@ export interface User {
   bio?: string;
   status?: string;
   cycle?: string;
+  department?: string; // 🆕 Département académique
 }
 
 export interface Collaborator {
@@ -175,6 +193,18 @@ export interface Project {
   coverImage?: string;      // URL de l'image de couverture (Cloudinary)
   demoVideo?: string;       // URL de la vidéo de démo (Cloudinary ou YouTube/Vimeo)
   videoType?: 'upload' | 'youtube' | 'vimeo'; // Type de vidéo
+  
+  // 🆕 FICHIERS JOINTS
+  attachedFile?: {
+    url: string;
+    name: string;
+    type: 'pdf' | 'docx' | 'pptx';
+    size: number; // en bytes
+    uploadedAt: string;
+  };
+  
+  // 🆕 TECHNOLOGIES
+  technologies?: string[]; // Ex: ['React', 'Node.js', 'MongoDB']
 }
 
 export interface Post {
@@ -202,6 +232,8 @@ export interface Comment {
   likes?: number;
   likedBy?: string[];
   replies?: Comment[];
+  isPinned?: boolean; // 🆕 Commentaire épinglé
+  parentId?: string;  // 🆕 ID du commentaire parent (pour les réponses)
 }
 
 export type View = 'dashboard' | 'projects' | 'users' | 'posts' | 'settings' | 'discussion_detail' | 'project_detail' | 'project_edit';
