@@ -1,77 +1,203 @@
 /**
- * NOVU NOTIFICATION SERVICE
- * Ce service gère l'intégration avec Novu pour les notifications en temps réel.
- * - Le frontend utilise @novu/browser pour le centre de notifications (Inbox).
- * - Le déclenchement des notifications (Trigger) se fait via votre API Backend (sécurisé).
+ * FIREBASE CLOUD MESSAGING (FCM) SERVICE
+ * Gère l'envoi de notifications push aux utilisateurs
+ * Note: Les notifications réelles nécessitent Firebase Cloud Functions côté serveur
  */
+
+// src/api/services/notificationService.ts
+/**
+ * FIREBASE CLOUD MESSAGING (FCM) SERVICE - VERSION CORRIGÉE
+ * Gère l'envoi de notifications push aux utilisateurs
+ * Utilise Supabase Database au lieu de Firestore
+ */
+
+import { supabaseDatabaseService } from './supabaseDatabaseService';
+import { TABLES } from '../config/supabase';
+
+interface Notification {
+  id?: string;
+  user_id: string; // ✅ snake_case pour Supabase
+  title: string;
+  message: string;
+  type: 'evaluation' | 'new_project' | 'comment' | 'system';
+  read: boolean;
+  created_at: string; // ✅ snake_case
+}
 
 export const notificationService = {
   /**
-   * Initialise le centre de notification (Inbox/Bell).
-   * À appeler dans App.tsx ou Header.tsx après la connexion utilisateur.
+   * Notifie un étudiant qu'il a reçu une évaluation
    */
-  initNotificationCenter: (userId: string) => {
-    const novuAppId = process.env.NOVU_APP_ID || "VOTRE_NOVU_APP_ID";
-    console.log(`[Novu Frontend] Initialisation du centre pour le subscriber : ${userId}`);
-    // Plus tard, vous pourrez décommenter ceci :
-    /*
-    import { NovuProvider } from '@novu/browser';
-    // Logic pour monter l'Inbox Novu sur l'élément ICONS.Bell
-    */
-  },
-
-  /**
-   * Simule un appel à votre backend pour déclencher une notification Novu.
-   * On ne trigger JAMAIS Novu directement depuis le front avec l'API Key secrète.
-   */
-  trigger: async (workflowId: string, subscriberId: string, payload: any) => {
-    console.log(`[Novu Backend] Déclenchement workflow: ${workflowId} pour: ${subscriberId}`, payload);
-    
-    // Structure de votre futur appel API Backend :
-    /*
+  notifyEvaluation: async (
+    userId: string, 
+    projectTitle: string, 
+    grade: string
+  ): Promise<void> => {
     try {
-      const response = await fetch('/api/notifications/trigger', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workflowId, subscriberId, payload })
-      });
-      return await response.json();
-    } catch (e) {
-      console.error("Erreur trigger notification:", e);
+      console.log(`📧 FCM: Envoi notification évaluation à l'utilisateur ${userId}`);
+      
+      const notification: Partial<Notification> = {
+        user_id: userId,
+        title: '📝 Nouvelle Évaluation',
+        message: `Votre projet "${projectTitle}" a été évalué avec la note ${grade}`,
+        type: 'evaluation',
+        read: false,
+        created_at: new Date().toISOString()
+      };
+
+      await supabaseDatabaseService.addDocument(TABLES.NOTIFICATIONS || 'notifications', notification);
+      
+      console.log('✅ Notification évaluation envoyée');
+    } catch (error) {
+      console.error('❌ Erreur notification évaluation:', error);
     }
-    */
-    return true;
   },
 
   /**
-   * Notification : Nouveau projet soumis (pour les Admins/Lecturers)
+   * Notifie les admins qu'un nouveau projet a été créé
    */
-  notifyNewProject: async (studentName: string, projectTitle: string) => {
-    return await notificationService.trigger('new-project-submission', 'admin_global', {
-      studentName,
-      projectTitle,
-      date: new Date().toLocaleDateString()
-    });
+  notifyNewProject: async (
+    authorName: string, 
+    projectTitle: string
+  ): Promise<void> => {
+    try {
+      console.log(`📧 FCM: Notification nouveau projet aux admins: ${projectTitle}`);
+      
+      // Récupérer tous les admins
+      const users = await supabaseDatabaseService.queryCollection<any>(
+        TABLES.USERS,
+        [{ column: 'role', operator: '==', value: 'admin' }]
+      );
+
+      // Créer une notification pour chaque admin
+      const notificationPromises = users.map(admin => {
+        const notification: Partial<Notification> = {
+          user_id: admin.id,
+          title: '🚀 Nouveau Projet',
+          message: `${authorName} vient de publier "${projectTitle}"`,
+          type: 'new_project',
+          read: false,
+          created_at: new Date().toISOString()
+        };
+
+        return supabaseDatabaseService.addDocument(
+          TABLES.NOTIFICATIONS || 'notifications', 
+          notification
+        );
+      });
+
+      await Promise.all(notificationPromises);
+      console.log(`✅ ${users.length} notifications envoyées aux admins`);
+    } catch (error) {
+      console.error('❌ Erreur notification nouveau projet:', error);
+    }
   },
 
   /**
-   * Notification : Projet évalué (pour l'Étudiant)
+   * Notifie un utilisateur qu'il a reçu un commentaire
    */
-  notifyEvaluation: async (studentId: string, projectTitle: string, grade: string) => {
-    return await notificationService.trigger('project-evaluated', studentId, {
-      projectTitle,
-      grade,
-      message: `Votre projet "${projectTitle}" a été noté : ${grade}`
-    });
+  notifyComment: async (
+    userId: string,
+    commenterName: string,
+    postTitle: string
+  ): Promise<void> => {
+    try {
+      console.log(`📧 FCM: Notification commentaire à l'utilisateur ${userId}`);
+      
+      const notification: Partial<Notification> = {
+        user_id: userId,
+        title: '💬 Nouveau Commentaire',
+        message: `${commenterName} a commenté votre post "${postTitle}"`,
+        type: 'comment',
+        read: false,
+        created_at: new Date().toISOString()
+      };
+
+      await supabaseDatabaseService.addDocument(
+        TABLES.NOTIFICATIONS || 'notifications', 
+        notification
+      );
+      
+      console.log('✅ Notification commentaire envoyée');
+    } catch (error) {
+      console.error('❌ Erreur notification commentaire:', error);
+    }
   },
 
   /**
-   * Notification : Nouveau commentaire sur une discussion
+   * Récupère les notifications d'un utilisateur
    */
-  notifyNewComment: async (authorId: string, postTitle: string, commentAuthor: string) => {
-    return await notificationService.trigger('new-comment', authorId, {
-      postTitle,
-      commentAuthor
-    });
+  getUserNotifications: async (userId: string): Promise<Notification[]> => {
+    try {
+      const notifications = await supabaseDatabaseService.queryCollection<Notification>(
+        TABLES.NOTIFICATIONS || 'notifications',
+        [{ column: 'user_id', operator: '==', value: userId }],
+        'created_at',
+        'desc',
+        20
+      );
+
+      return notifications;
+    } catch (error) {
+      console.error('❌ Erreur récupération notifications:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Marque une notification comme lue
+   */
+  markAsRead: async (notificationId: string): Promise<void> => {
+    try {
+      await supabaseDatabaseService.updateDocument(
+        TABLES.NOTIFICATIONS || 'notifications', 
+        notificationId, 
+        { read: true }
+      );
+    } catch (error) {
+      console.error('❌ Erreur marquage notification:', error);
+    }
+  },
+
+  /**
+   * Marque toutes les notifications d'un utilisateur comme lues
+   */
+  markAllAsRead: async (userId: string): Promise<void> => {
+    try {
+      const notifications = await supabaseDatabaseService.queryCollection<Notification>(
+        TABLES.NOTIFICATIONS || 'notifications',
+        [
+          { column: 'user_id', operator: '==', value: userId },
+          { column: 'read', operator: '==', value: false }
+        ]
+      );
+
+      const updatePromises = notifications.map(notif => 
+        supabaseDatabaseService.updateDocument(
+          TABLES.NOTIFICATIONS || 'notifications', 
+          notif.id!, 
+          { read: true }
+        )
+      );
+
+      await Promise.all(updatePromises);
+      console.log(`✅ ${notifications.length} notifications marquées comme lues`);
+    } catch (error) {
+      console.error('❌ Erreur marquage toutes notifications:', error);
+    }
+  },
+
+  /**
+   * Supprime une notification
+   */
+  deleteNotification: async (notificationId: string): Promise<void> => {
+    try {
+      await supabaseDatabaseService.deleteDocument(
+        TABLES.NOTIFICATIONS || 'notifications', 
+        notificationId
+      );
+    } catch (error) {
+      console.error('❌ Erreur suppression notification:', error);
+    }
   }
 };

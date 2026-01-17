@@ -7,10 +7,11 @@ import ProjectList from './components/ProjectList';
 import AdminPanel from './components/AdminPanel';
 import DiscussionBoard from './components/DiscussionBoard';
 import { User, Project, UserRole, View, Post, ProjectStatus, Language, PostCategory, Comment, Review, LetterGrade } from './types';
-import { INITIAL_USERS, INITIAL_PROJECTS, INITIAL_POSTS } from './mockData';
+//import { INITIAL_USERS, INITIAL_PROJECTS, INITIAL_POSTS } from './mockData';
+import PDFPreviewModal from './components/PDFPreviewModal';
 import { ICONS } from './constants';
 import { translations } from './translations';
-import { apiGateway } from './api/gateway';
+import { apiGateway } from './api/gateway-supabase';
 import MediaUploader from './components/MediaUploader';
 import FileUploader from './components/FileUploader';
 import TechTagsInput from './components/TechTagsInput';
@@ -40,9 +41,9 @@ const App: React.FC = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [dashboardTab, setDashboardTab] = useState<'all' | 'in_progress' | 'completed'>('all');
   
-  const [users, setUsers] = useState<User[]>(INITIAL_USERS);
-  const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
-  const [posts, setPosts] = useState<Post[]>(INITIAL_POSTS);
+  const [users, setUsers] = useState<User[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   
@@ -60,6 +61,7 @@ const App: React.FC = () => {
 
   // Settings / Profile Form State
   const [profileForm, setProfileForm] = useState<Partial<User>>({});
+  const [pdfPreview, setPdfPreview] = useState<{url: string; name: string} | null>(null);
 
   const t = translations[language];
 
@@ -168,11 +170,15 @@ const App: React.FC = () => {
     if (!file || !currentUser) return;
 
     try {
-      // 1. Upload to Cloudinary
-      const imageUrl = await apiGateway.storage.upload(file, 'avatars');
-      // 2. Update Firestore profile
+      console.log('📤 Upload avatar vers Supabase Storage...');
+      // 1. Upload vers Supabase Storage
+      const imageUrl = await apiGateway.storage.uploadAvatar(file);
+      console.log('✅ Avatar uploadé:', imageUrl);
+      
+      // 2. Update dans Supabase Database
       const updatedUser = await apiGateway.db.users.update(currentUser.id, { avatar: imageUrl });
-      // 3. Update UI states
+      
+      // 3. Update UI
       setCurrentUser(updatedUser);
       setUsers(prev => prev.map(u => u.id === currentUser.id ? updatedUser : u));
     } catch (error: any) {
@@ -673,8 +679,10 @@ const App: React.FC = () => {
                     </svg>
                   )}
                 </button>
+          
                 {/* ShowSignupPassword end */}
               </div>
+              
               <div className="pt-4 space-y-4">
                 <button type="submit" className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-2xl shadow-blue-200 hover:bg-blue-700 active:scale-95 transition-all">Valider mon inscription</button>
                 <button type="button" onClick={() => setAuthMode('login')} className="w-full py-4 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase tracking-widest text-[9px] hover:bg-slate-200 transition-all">Annuler et revenir à la connexion</button>
@@ -860,13 +868,15 @@ const App: React.FC = () => {
                 {(consultingProject.coverImage || consultingProject.demoVideo) && (
                   <div className="bg-white rounded-[4rem] border border-slate-100 overflow-hidden shadow-2xl">
                     {consultingProject.demoVideo ? (
-                      <div className="w-full aspect-video bg-black">
-                        {consultingProject.demoVideo.includes('cloudinary') ? (
+                      <div className="w-full aspect-video bg-black relative">
+                        {consultingProject.demoVideo.includes('supabase') ? (
                           <video 
                             src={consultingProject.demoVideo} 
                             controls 
                             poster={consultingProject.coverImage}
-                            className="w-full h-full"
+                            //className="w-full h-full"
+                            className="absolute inset-0 w-full h-full object-cover"
+                            preload="metadata"
                           >
                             Votre navigateur ne supporte pas la lecture vidéo.
                           </video>
@@ -879,7 +889,10 @@ const App: React.FC = () => {
                                 ? consultingProject.demoVideo.replace('vimeo.com/', 'player.vimeo.com/video/')
                                 : consultingProject.demoVideo
                             }
-                            className="w-full h-full"
+                            /*className="w-full h-full"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen*/
+                            className="absolute inset-0 w-full h-full"
                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                             allowFullScreen
                           />
@@ -915,7 +928,7 @@ const App: React.FC = () => {
                 )}
 
                 {/* 🆕 Section Fichier Annexe */}
-                {consultingProject.attachedFile && (
+                {/*{consultingProject.attachedFile && (
                   <div className="bg-gradient-to-br from-blue-50 to-purple-50 p-10 rounded-[3.5rem] border-2 border-blue-100 shadow-lg">
                     <h4 className="font-black text-slate-900 uppercase tracking-tighter italic mb-6 flex items-center gap-3">
                       <svg className="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
@@ -949,7 +962,66 @@ const App: React.FC = () => {
                       </a>
                     </div>
                   </div>
-                )}
+                )}*/}
+
+                {/* 🆕 Section Fichier Annexe */}
+{consultingProject.attachedFile && (
+  <div className="bg-gradient-to-br from-blue-50 to-purple-50 p-10 rounded-[3.5rem] border-2 border-blue-100 shadow-lg">
+    <h4 className="font-black text-slate-900 uppercase tracking-tighter italic mb-6 flex items-center gap-3">
+      <svg className="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+        <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+      </svg>
+      Document Annexe
+    </h4>
+    <div className="bg-white rounded-2xl p-6 flex items-center gap-4 group hover:shadow-xl transition-all">
+      <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+        <svg className="w-8 h-8 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+        </svg>
+      </div>
+      <div className="flex-1">
+        <p className="font-black text-slate-900 text-lg mb-1">{consultingProject.attachedFile.name}</p>
+        <p className="text-sm text-slate-500 font-medium">
+          {(consultingProject.attachedFile.size / (1024 * 1024)).toFixed(2)} MB • {consultingProject.attachedFile.type.toUpperCase()}
+        </p>
+      </div>
+      
+      {/* 🔥 BOUTONS MODIFIÉS AVEC PRÉVISUALISATION */}
+      <div className="flex gap-3">
+        {/* Bouton Prévisualiser (seulement pour PDF) */}
+        {consultingProject.attachedFile.type === 'application/pdf' && (
+          <button
+            onClick={() => setPdfPreview({
+              url: consultingProject.attachedFile!.url,
+              name: consultingProject.attachedFile!.name
+            })}
+            className="px-6 py-4 bg-purple-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-purple-700 transition-all shadow-lg flex items-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            Prévisualiser
+          </button>
+        )}
+        
+        {/* Bouton Télécharger */}
+        <a
+          href={consultingProject.attachedFile.url}
+          download={consultingProject.attachedFile.name}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="px-8 py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-blue-700 transition-all shadow-lg flex items-center gap-2"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          Télécharger
+        </a>
+      </div>
+    </div>
+  </div>
+)}
             
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
                   <div className="lg:col-span-2 space-y-12">
@@ -1101,6 +1173,7 @@ const App: React.FC = () => {
                         <option value="Alumni">Ancien (Alumni)</option>
                         <option value="Staff">Personnel (Staff)</option>
                         <option value="Faculty">Enseignant (Faculty)</option>
+                        <option value="Administration">Administration</option>
                       </select>
                     </div>
                     
@@ -1156,8 +1229,18 @@ const App: React.FC = () => {
       {isPostModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6"><div className="absolute inset-0 bg-slate-900/80 backdrop-blur-xl" onClick={() => setIsPostModalOpen(false)}></div><div className="bg-white rounded-[4rem] w-full max-w-2xl z-10 shadow-2xl animate-modalScale flex flex-col overflow-hidden"><div className="p-10 border-b border-slate-100 shrink-0"><h3 className="text-3xl font-black text-gray-900 uppercase italic tracking-tighter">{newPost.id ? 'Modifier la discussion' : 'Ouvrir un débat'}</h3></div><div className="p-10 space-y-8 overflow-y-auto custom-scrollbar flex-1"><input type="text" value={newPost.title} onChange={e => setNewPost({...newPost, title: e.target.value})} className="w-full px-8 py-5 bg-slate-50 border-2 border-slate-100 rounded-[2rem] text-gray-900 font-bold outline-none transition-all" placeholder="Sujet..." /><textarea rows={5} value={newPost.content} onChange={e => setNewPost({...newPost, content: e.target.value})} className="w-full px-8 py-6 bg-slate-50 border-2 border-slate-100 rounded-[2.5rem] text-gray-900 font-medium outline-none transition-all resize-none" placeholder="Détails..." /><div className="flex flex-wrap gap-3">{['Discussion', 'Aide', currentUser.role === UserRole.ADMIN ? 'Annonce' : null, currentUser.role === UserRole.LECTURER ? 'Exercices' : null].filter(Boolean).map(cat => (<button key={cat as string} onClick={() => setNewPost({...newPost, category: cat as any})} className={`px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] transition-all border-2 ${newPost.category === cat ? 'bg-blue-600 text-white border-blue-600 shadow-xl' : 'bg-white text-slate-400 border-slate-100 hover:border-blue-200'}`}>{cat}</button>))}</div></div><div className="p-10 bg-slate-50 border-t border-slate-100 flex justify-end gap-6 shrink-0"><button onClick={() => setIsPostModalOpen(false)} className="px-8 py-4 font-black text-slate-500 uppercase tracking-widest text-[10px]">Annuler</button><button onClick={handleSavePost} className="px-14 py-5 bg-blue-600 text-white font-black rounded-[1.5rem] shadow-2xl shadow-blue-200 uppercase tracking-widest text-[10px] hover:bg-blue-700 transition-all active:scale-95">{newPost.id ? 'Mettre à jour' : 'Diffuser'}</button></div></div></div>
       )}
+      {/* Modal de prévisualisation PDF */}
+      {pdfPreview && (
+        <PDFPreviewModal
+          fileUrl={pdfPreview.url}
+          fileName={pdfPreview.name}
+          onClose={() => setPdfPreview(null)}
+        />
+      )}
+      
       <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } } @keyframes modalScale { from { opacity: 0; transform: scale(0.92) translateY(30px); } to { opacity: 1; transform: scale(1) translateY(0); } } .animate-fadeIn { animation: fadeIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; } .animate-modalScale { animation: modalScale 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; } .hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
-    </div>
+      </div>
+      
   );
 };
 
